@@ -1,0 +1,19 @@
+asset_status.asset_log_entry_type.*:
+  type: config_entity
+  label: 'Asset log entry type'
+  mapping:
+    id:
+      type: string
+      label: 'Machine name'
+    uuid:
+      type: string
+      label: 'UUID'
+    label:
+      type: label
+      label: 'Label'
+    description:
+      type: text
+      label: 'Description'
+    default_workflow_state:
+      type: string
+      label: 'Default workflow state'

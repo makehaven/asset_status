@@ -1,0 +1,8 @@
+uuid: a2a79f2a-0e87-4a8a-8cb5-74cf497fb342
+langcode: en
+status: true
+dependencies: {  }
+id: maintenance
+label: Maintenance
+description: 'Logs preventive or corrective maintenance work.'
+default_workflow_state: null

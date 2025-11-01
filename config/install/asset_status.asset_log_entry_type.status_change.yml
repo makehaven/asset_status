@@ -1,0 +1,8 @@
+uuid: 9fcfa0e4-0f41-4ee4-93ec-627350e7f95b
+langcode: en
+status: true
+dependencies: {  }
+id: status_change
+label: 'Status change'
+description: 'Tracks confirmed asset status transitions.'
+default_workflow_state: null

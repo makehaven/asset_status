@@ -1,0 +1,10 @@
+name: 'Asset Status'
+type: module
+description: 'Provides structured asset status tracking, logging, and reporting tools.'
+core_version_requirement: ^10 || ^11
+package: MakeHaven
+dependencies:
+  - drupal:node
+  - drupal:taxonomy
+  - drupal:user
+  - drupal:workflows

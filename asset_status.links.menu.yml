@@ -1,0 +1,13 @@
+asset_status.asset_log_entry_collection:
+  title: 'Asset log entries'
+  route_name: entity.asset_log_entry.collection
+  description: 'Review equipment status and maintenance logs.'
+  parent: system.admin_content
+  weight: 20
+
+asset_status.asset_log_entry_type_collection:
+  title: 'Asset log entry types'
+  route_name: entity.asset_log_entry_type.collection
+  description: 'Manage log entry bundles for different workflows.'
+  parent: system.admin_structure
+  weight: 25

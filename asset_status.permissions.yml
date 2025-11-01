@@ -1,0 +1,12 @@
+administer asset log entries:
+  title: 'Administer asset log entries'
+  description: 'Manage all asset log entries and configuration.'
+  restrict access: true
+
+log asset maintenance events:
+  title: 'Log asset maintenance events'
+  description: 'Create and edit maintenance log entries for assets.'
+
+review asset status reports:
+  title: 'Review asset status reports'
+  description: 'Evaluate member-reported issues and confirm asset statuses.'

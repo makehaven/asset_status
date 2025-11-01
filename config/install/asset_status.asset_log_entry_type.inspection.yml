@@ -1,0 +1,8 @@
+uuid: 8fb061b1-6bd0-44f1-b259-0f0bce7d0cd9
+langcode: en
+status: true
+dependencies: {  }
+id: inspection
+label: Inspection
+description: 'Records scheduled inspections or readiness checks.'
+default_workflow_state: null
