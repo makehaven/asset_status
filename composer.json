@@ -1,0 +1,6 @@
+{
+    "name": "makehaven/asset_status",
+    "type": "drupal-custom-module",
+    "description": "Provides asset status workflows and maintenance logging tools.",
+    "license": "GPL-2.0-or-later"
+}
