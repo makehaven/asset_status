@@ -6,7 +6,7 @@ namespace Drupal\asset_status\Entity;
 
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityChangedInterface;
-use Drupal\Core\Entity\EntityOwnerInterface;
+use Drupal\user\EntityOwnerInterface;
 use Drupal\Core\Entity\RevisionLogInterface;
 
 /**

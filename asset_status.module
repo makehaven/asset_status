@@ -1,0 +1,50 @@
+<?php
+
+declare(strict_types=1);
+
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\node\NodeInterface;
+
+/**
+ * Logs node status changes through the Asset Status service layer.
+ */
+function asset_status_entity_insert(EntityInterface $entity): void {
+  asset_status_handle_node_status_change($entity, TRUE);
+}
+
+/**
+ * Reacts to updates on item nodes and records status history.
+ */
+function asset_status_entity_update(EntityInterface $entity): void {
+  asset_status_handle_node_status_change($entity, FALSE);
+}
+
+/**
+ * Delegates node status changes to the status change logger service.
+ */
+function asset_status_handle_node_status_change(EntityInterface $entity, bool $is_new): void {
+  if (!$entity instanceof NodeInterface) {
+    return;
+  }
+
+  if ($entity->bundle() !== 'item' || !$entity->hasField('field_item_status')) {
+    return;
+  }
+
+  $current_term = !$entity->get('field_item_status')->isEmpty()
+    ? $entity->get('field_item_status')->entity
+    : NULL;
+
+  $original_term = NULL;
+  if (!$is_new && isset($entity->original) && $entity->original instanceof NodeInterface) {
+    $original_field = $entity->original->get('field_item_status');
+    if ($original_field && !$original_field->isEmpty()) {
+      $original_term = $original_field->entity;
+    }
+  }
+
+  \Drupal::service('asset_status.status_change_logger')
+    ->handleNodeStatusChange($entity, $original_term, $current_term, [
+      'is_new' => $is_new,
+    ]);
+}

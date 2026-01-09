@@ -12,6 +12,10 @@ maintenance logging module.
 - Administrative listing pages and forms exposed under **Content → Asset log**
   and **Structure → Asset log entry types** once the module is enabled.
 - Permission stubs for staff to administer and triage records.
+- Automatic `status_change` entries created whenever an `item` node’s
+  `field_item_status` value is created, updated, or cleared. The service class
+  lives at `asset_status.status_change_logger` and can be injected wherever
+  future tooling (REST endpoints, batch processors) needs to create log entries.
 
 ## Install & local development
 
@@ -40,13 +44,55 @@ maintenance logging module.
    - `log asset maintenance events`
    - `administer asset log entries`
 
+## Mandatory configuration checklist
+
+Run through these items the first time the module is enabled on an environment:
+
+1. **Verify taxonomy + node fields** – Ensure `field_item_status` exists on the
+   `item` content type and that its allowed vocabulary (`item_status`) contains
+   the “Up/Impaired/Down/Storage/etc.” values you expect to expose publicly.
+2. **Expose the status block** – The legacy `views.view.asset_status` block can
+   stay in breadcrumb regions for now, but plan to swap it for a formatter that
+   also surfaces recent `asset_log_entry` notes.
+3. **Grant permissions** – Assign the three provided permissions to whichever
+   staff roles should triage logs and run maintenance workflows.
+4. **Clear caches** – Run `lando drush cr` any time the module definitions
+   change so Drupal can discover the new entity type and services.
+5. **Smoke test logging** – Edit an `item` node, flip `field_item_status`, and
+   confirm a new `status_change` entry appears under **Content → Asset log**.
+
+## Manual data model extensions
+
+This module intentionally ships lean fields so each makerspace can tailor the
+log entries they need. Additions you can make through the UI without touching
+code:
+
+1. **Repair metadata** – Add entity reference/decimal fields to the
+   `maintenance` bundle for “work order #”, “parts used”, “time to repair”, and
+   “cost”. Use the Field UI on each bundle (`/admin/structure/asset-log-entry-types`).
+2. **Workflow states** – If you need multi-step repairs, create a workflow in
+   Drupal core and attach it via the `default_workflow_state` property on each
+   bundle (config export lives at `asset_status.asset_log_entry_type.*`).
+3. **Public displays** – Build a View of `asset_log_entry` filtered by asset and
+   expose it on `node/%/asset-log` or embed it within the existing asset page
+   display. Members should be able to see at least the last resolved issue and
+   current open work.
+4. **Slack routing fields** – Ensure every tool has either
+   `field_item_slack_channel` populated or inherits one from its area-of-interest
+   taxonomy term (`field_interest_slack_channel`). The upcoming Slack queue
+   worker will read these values to decide where to broadcast updates.
+
+Document any bespoke fields you add in this README so downstream deployers (or
+future AI assistants) know the canonical data structures.
+
 ## Next build steps
 
-- Integrate status-change automation so updates on `item` nodes create log
-  entries and keep the node’s status fields in sync.
 - Replace the `/report-mess` and `/equipment/issue` flows with directed
   controllers that create member-submitted log entries.
-- Add dashboards/REST outputs for uptime KPIs.
+- Add dashboards/REST outputs for uptime KPIs powered by `asset_log_entry`
+  revisions instead of raw node data.
+- Fold Slack notifications into a queue-backed service so changes to log
+  entries, not just node edits, notify the relevant channel.
 
 Keep module comments and docs aligned with Drupal coding standards (PSR-4,
 Drupal CS) and capture future behaviour changes in this README as the module

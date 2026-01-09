@@ -6,6 +6,7 @@ namespace Drupal\asset_status\Entity;
 
 use Drupal\Core\Entity\ContentEntityBase;
 use Drupal\Core\Entity\EntityChangedTrait;
+use Drupal\Core\Entity\RevisionLogEntityTrait;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
@@ -77,6 +78,7 @@ final class AssetLogEntry extends ContentEntityBase implements AssetLogEntryInte
 
   use EntityOwnerTrait;
   use EntityChangedTrait;
+  use RevisionLogEntityTrait;
 
   /**
    * {@inheritdoc}
@@ -100,7 +102,7 @@ final class AssetLogEntry extends ContentEntityBase implements AssetLogEntryInte
       ->setDescription(t('The log entry language.'))
       ->setRevisionable(TRUE);
 
-    $fields['user_id']
+    $fields['user_id'] = BaseFieldDefinition::create('entity_reference')
       ->setLabel(t('Logged by'))
       ->setDescription(t('The user who created the log entry.'))
       ->setSetting('target_type', 'user')

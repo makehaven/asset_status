@@ -1,0 +1,7 @@
+services:
+  asset_status.status_change_logger:
+    class: Drupal\asset_status\Service\StatusChangeLogger
+    arguments:
+      - '@entity_type.manager'
+      - '@current_user'
+      - '@logger.factory'
