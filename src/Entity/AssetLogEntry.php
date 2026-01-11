@@ -39,7 +39,7 @@ use Drupal\user\EntityOwnerTrait;
  *     "route_provider" = {
  *       "html" = "Drupal\Core\Entity\Routing\AdminHtmlRouteProvider"
  *     },
- *     "access" = "Drupal\Core\Entity\EntityAccessControlHandler"
+ *     "access" = "Drupal\asset_status\AccessControl\AssetLogEntryAccessControlHandler"
  *   },
  *   base_table = "asset_log_entry",
  *   revision_table = "asset_log_entry_revision",
