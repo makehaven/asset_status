@@ -1,0 +1,49 @@
+<?php
+
+declare(strict_types=1);
+
+use Drupal\taxonomy\Entity\Term;
+
+/**
+ * @file
+ * Install, update and uninstall functions for the asset_status module.
+ */
+
+/**
+ * Creates standard asset status terms: Operational, Degraded, Out of Service.
+ */
+function asset_status_update_10001(): void {
+  $terms_to_create = [
+    'Operational',
+    'Degraded',
+    'Out of Service',
+    'Setup / Training Only',
+  ];
+
+  $vid = 'item_status';
+
+  // Ensure vocabulary exists.
+  $vocab_storage = \Drupal::entityTypeManager()->getStorage('taxonomy_vocabulary');
+  if (!$vocab_storage->load($vid)) {
+    // If the vocabulary is missing, we can't add terms.
+    // In a real scenario, we might create it, but existing config suggests it exists.
+    return;
+  }
+
+  $term_storage = \Drupal::entityTypeManager()->getStorage('taxonomy_term');
+
+  foreach ($terms_to_create as $label) {
+    // Check if term already exists.
+    $existing = $term_storage->loadByProperties([
+      'vid' => $vid,
+      'name' => $label,
+    ]);
+
+    if (!$existing) {
+      Term::create([
+        'vid' => $vid,
+        'name' => $label,
+      ])->save();
+    }
+  }
+}

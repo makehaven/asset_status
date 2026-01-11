@@ -1,0 +1,14 @@
+entity.node.asset_status.maintenance:
+  route_name: entity.node.asset_status.maintenance
+  base_route: entity.node.canonical
+  title: 'Record Maintenance'
+  weight: 20
+  options:
+    attributes:
+      class: ['asset-maintenance-tab']
+
+entity.node.asset_status.history:
+  route_name: entity.node.asset_status.history
+  base_route: entity.node.canonical
+  title: 'Maintenance History'
+  weight: 21

@@ -59,4 +59,14 @@ interface AssetLogEntryInterface extends ContentEntityInterface, EntityOwnerInte
    */
   public function setDetails(?string $details): self;
 
+  /**
+   * Gets the creation timestamp.
+   */
+  public function getCreatedTime(): int;
+
+  /**
+   * Sets the creation timestamp.
+   */
+  public function setCreatedTime($timestamp): self;
+
 }

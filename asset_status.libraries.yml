@@ -1,0 +1,4 @@
+asset_status_block:
+  css:
+    component:
+      css/asset_status_block.css: {}

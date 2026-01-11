@@ -1,0 +1,33 @@
+{#
+/**
+ * @file
+ * Default theme implementation for the Asset Status Block.
+ *
+ * Available variables:
+ * - status_label: The human-readable label of the status.
+ * - status_class: The CSS class for coloring (e.g., status-operational).
+ * - message: (Optional) The latest log details message.
+ * - history_url: URL to the asset history page.
+ */
+#}
+{% if history_url %}
+  <a href="{{ history_url }}" class="asset-status-link" title="{{ 'View maintenance history'|t }}">
+{% endif %}
+
+<div class="asset-status-block {{ status_class }}">
+  <div class="status-label">
+    Status: {{ status_label }}
+  </div>
+
+  {% if message %}
+    <div class="asset-status-message">
+      {{ message }}
+    </div>
+  {% endif %}
+</div>
+
+{% if history_url %}
+  </a>
+{% endif %}
+
+<a href="#reporting-boxes" class="report-issue-link">Report Issue</a>

@@ -3,7 +3,64 @@
 declare(strict_types=1);
 
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\node\NodeInterface;
+use Drupal\Core\Field\FieldDefinitionInterface;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Field\FieldItemListInterface;
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter() for node forms.
+ */
+function asset_status_form_node_form_alter(array &$form, FormStateInterface $form_state, string $form_id): void {
+  /** @var \Drupal\node\NodeInterface $node */
+  $node = $form_state->getFormObject()->getEntity();
+
+  // Only apply to 'item' content type.
+  if ($node->bundle() !== 'item') {
+    return;
+  }
+
+  // Add a dedicated field for status change notes.
+  // We insert this near the status field if possible.
+  $form['asset_status_log_message'] = [
+    '#type' => 'textarea',
+    '#title' => t('Status Change / Log Notes'),
+    '#description' => t('If you are changing the status, please describe the reason (e.g., "Belt snapped," "Routine cleaning"). This will be saved to the asset log and posted to Slack.'),
+    '#rows' => 3,
+    '#weight' => 1, // Attempt to place it near the top (Status is usually 0).
+  ];
+
+  // Add a custom submit handler to capture this value.
+  $form['actions']['submit']['#submit'][] = 'asset_status_node_form_submit';
+}
+
+/**
+ * Custom submit handler to attach log message to the node entity.
+ */
+function asset_status_node_form_submit(array $form, FormStateInterface $form_state): void {
+  $node = $form_state->getFormObject()->getEntity();
+  $message = $form_state->getValue('asset_status_log_message');
+  
+  if (!empty($message)) {
+    // Attach the message to the entity as a temporary property.
+    // This allows hook_entity_update and the Slack module to access it.
+    $node->_asset_status_log_message = $message;
+  }
+}
+
+/**
+ * Implements hook_entity_field_access().
+ */
+function asset_status_entity_field_access($operation, FieldDefinitionInterface $field_definition, AccountInterface $account, ?FieldItemListInterface $items = NULL) {
+  // Hide 'reported_status' from the user on forms.
+  // It is maintained internally or via specific member-facing forms.
+  if ($field_definition->getName() === 'reported_status' && $operation === 'edit') {
+    return AccessResult::forbidden();
+  }
+  return AccessResult::neutral();
+}
 
 /**
  * Logs node status changes through the Asset Status service layer.
@@ -43,8 +100,31 @@ function asset_status_handle_node_status_change(EntityInterface $entity, bool $i
     }
   }
 
+  $context = [
+    'is_new' => $is_new,
+  ];
+
+  // Check for the custom log message attached by our submit handler.
+  if (isset($entity->_asset_status_log_message)) {
+    $context['details'] = $entity->_asset_status_log_message;
+  }
+
   \Drupal::service('asset_status.status_change_logger')
-    ->handleNodeStatusChange($entity, $original_term, $current_term, [
-      'is_new' => $is_new,
-    ]);
+    ->handleNodeStatusChange($entity, $original_term, $current_term, $context);
+}
+
+/**
+ * Implements hook_theme().
+ */
+function asset_status_theme(): array {
+  return [
+    'asset_status_block' => [
+      'variables' => [
+        'status_label' => NULL,
+        'status_class' => NULL,
+        'message' => NULL,
+        'history_url' => NULL,
+      ],
+    ],
+  ];
 }

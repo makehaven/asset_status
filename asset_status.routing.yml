@@ -1,0 +1,23 @@
+entity.node.asset_status.maintenance:
+  path: '/node/{node}/maintenance'
+  defaults:
+    _controller: '\Drupal\asset_status\Controller\AssetLogController::addMaintenance'
+    _title: 'Record Maintenance'
+  requirements:
+    _permission: 'log asset maintenance events'
+    _entity_bundles: 'node:item'
+    node: \d+
+  options:
+    _admin_route: TRUE
+
+entity.node.asset_status.history:
+  path: '/node/{node}/asset-history'
+  defaults:
+    _controller: '\Drupal\asset_status\Controller\AssetLogController::history'
+    _title: 'Maintenance History'
+  requirements:
+    _permission: 'access content'
+    _entity_bundles: 'node:item'
+    node: \d+
+  options:
+    _admin_route: TRUE

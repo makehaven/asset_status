@@ -5,3 +5,8 @@ services:
       - '@entity_type.manager'
       - '@current_user'
       - '@logger.factory'
+
+  asset_status.availability:
+    class: Drupal\asset_status\Service\AssetAvailability
+    arguments:
+      - '@entity_type.manager'

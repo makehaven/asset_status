@@ -11,6 +11,7 @@ use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\user\EntityOwnerTrait;
+use Drupal\user\UserInterface;
 
 /**
  * Defines the asset log entry entity.
@@ -260,7 +261,7 @@ final class AssetLogEntry extends ContentEntityBase implements AssetLogEntryInte
   /**
    * {@inheritdoc}
    */
-  public static function preCreate(EntityStorageInterface $storage, array &$values): void {
+  public static function preCreate(EntityStorageInterface $storage, array & $values): void {
     parent::preCreate($storage, $values);
     if (!isset($values['user_id']) && \Drupal::currentUser()) {
       $values['user_id'] = \Drupal::currentUser()->id();
@@ -346,6 +347,51 @@ final class AssetLogEntry extends ContentEntityBase implements AssetLogEntryInte
    */
   public function setDetails(?string $details): self {
     $this->set('details', $details);
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getCreatedTime(): int {
+    return (int) $this->get('created')->value;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setCreatedTime($timestamp): self {
+    $this->set('created', $timestamp);
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getOwner() {
+    return $this->get('user_id')->entity;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getOwnerId() {
+    return $this->get('user_id')->target_id;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setOwnerId($uid) {
+    $this->set('user_id', $uid);
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setOwner(UserInterface $account) {
+    $this->set('user_id', $account->id());
     return $this;
   }
 
