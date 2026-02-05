@@ -125,12 +125,12 @@ final class StatusChangeLogger {
    * Provides a default log entry body.
    */
   private function buildDefaultDetails(NodeInterface $asset, ?TermInterface $originalStatus, ?TermInterface $currentStatus, bool $isNew): string {
-    $user = $this->currentUser->getDisplayName();
+    $user = (string) $this->currentUser->getDisplayName();
 
     if ($isNew) {
       return (string) $this->t('@user created @asset with starting status @status.', [
         '@user' => $user,
-        '@asset' => $asset->label(),
+        '@asset' => (string) $asset->label(),
         '@status' => $this->formatStatusLabel($currentStatus),
       ]);
     }
@@ -141,7 +141,7 @@ final class StatusChangeLogger {
     if ($originalStatus && $currentStatus) {
       return (string) $this->t('@user updated @asset from @old to @new.', [
         '@user' => $user,
-        '@asset' => $asset->label(),
+        '@asset' => (string) $asset->label(),
         '@old' => $old,
         '@new' => $new,
       ]);
@@ -150,14 +150,14 @@ final class StatusChangeLogger {
     if ($originalStatus && !$currentStatus) {
       return (string) $this->t('@user cleared the status on @asset (was @old).', [
         '@user' => $user,
-        '@asset' => $asset->label(),
+        '@asset' => (string) $asset->label(),
         '@old' => $old,
       ]);
     }
 
     return (string) $this->t('@user set the status on @asset to @new.', [
       '@user' => $user,
-      '@asset' => $asset->label(),
+      '@asset' => (string) $asset->label(),
       '@new' => $new,
     ]);
   }

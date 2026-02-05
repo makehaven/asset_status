@@ -54,13 +54,28 @@ final class AssetStatusWebformHandler extends WebformHandlerBase {
    */
   public function postSave(WebformSubmissionInterface $webform_submission, $update = FALSE) {
     // 1. Identify the Asset.
-    // Try URL parameter first (legacy support).
-    $nid = \Drupal::request()->query->get('asset_nid');
-    
-    // Fallback: Check if the webform has a field named 'asset_nid' or 'asset'.
+    $nid = NULL;
+    $data = $webform_submission->getData();
+
+    // Try data field first (most reliable if configured).
+    if (!empty($data['asset_nid'])) {
+      $nid = $data['asset_nid'];
+    }
+    elseif (!empty($data['asset'])) {
+      $nid = $data['asset'];
+    }
+
+    // Try current route (if form is on the node page).
     if (!$nid) {
-      $data = $webform_submission->getData();
-      $nid = $data['asset_nid'] ?? ($data['asset'] ?? NULL);
+      $route_node = \Drupal::routeMatch()->getParameter('node');
+      if ($route_node instanceof \Drupal\node\NodeInterface) {
+        $nid = $route_node->id();
+      }
+    }
+
+    // Try URL parameter (legacy / fallback).
+    if (!$nid) {
+      $nid = \Drupal::request()->query->get('asset_nid');
     }
 
     if (!$nid) {

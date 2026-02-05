@@ -95,9 +95,8 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
       /** @var \Drupal\asset_status\Entity\AssetLogEntryInterface $log_entry */
       $log_entry = $this->entityTypeManager->getStorage('asset_log_entry')->load($log_id);
       if ($log_entry) {
-        // We prefer the 'details' field if populated, otherwise the summary.
-        // But for status display, usually 'details' contains the "Waiting for parts" info.
-        $latest_message = $log_entry->getDetails();
+        // We prefer the 'details' field if populated, otherwise fallback to summary.
+        $latest_message = $log_entry->getDetails() ?: $log_entry->getSummary();
       }
     }
 

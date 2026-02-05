@@ -84,6 +84,12 @@ function asset_status_handle_node_status_change(EntityInterface $entity, bool $i
     return;
   }
 
+  // Allow other services (like manual maintenance logging) to skip automatic status logging
+  // if they are already creating a more specific log entry.
+  if (!empty($entity->_skip_asset_status_log)) {
+    return;
+  }
+
   if ($entity->bundle() !== 'item' || !$entity->hasField('field_item_status')) {
     return;
   }

@@ -269,6 +269,35 @@ final class AssetLogEntry extends ContentEntityBase implements AssetLogEntryInte
   }
 
   /**
+   * {@inheritdoc}
+   */
+  public function postSave(EntityStorageInterface $storage, $update = TRUE): void {
+    parent::postSave($storage, $update);
+
+    // When a log entry is created or updated with a confirmed status,
+    // sync that status back to the asset (Node) itself.
+    $confirmed_status = $this->getConfirmedStatus();
+    $asset = $this->getAsset();
+
+    if ($confirmed_status && $asset && $asset->hasField('field_item_status')) {
+      $current_status_id = $asset->get('field_item_status')->target_id;
+      if ((int) $current_status_id !== (int) $confirmed_status->id()) {
+        // Update the asset's status to match the confirmed status.
+        $asset->set('field_item_status', $confirmed_status->id());
+
+        // We set a flag to avoid triggering the automatic StatusChangeLogger,
+        // since THIS log entry already serves as the record for the change.
+        $asset->_skip_asset_status_log = TRUE;
+
+        // Ensure Slack still gets notified by passing the log message.
+        $asset->_asset_status_log_message = $this->getSummary();
+
+        $asset->save();
+      }
+    }
+  }
+
+  /**
    * Provides a lazy callback used for revision authors.
    */
   public static function getCurrentUserId(): array {
