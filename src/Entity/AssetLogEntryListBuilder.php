@@ -73,7 +73,8 @@ final class AssetLogEntryListBuilder extends EntityListBuilder {
     $asset = $entity->getAsset();
     $row['asset'] = $asset ? Link::createFromRoute($asset->label(), 'entity.node.canonical', ['node' => $asset->id()]) : $this->t('Unknown');
     $row['bundle'] = $entity->bundle();
-    $row['user_id'] = $entity->getOwner()->getDisplayName();
+    $owner = $entity->getOwner();
+    $row['user_id'] = $owner ? $owner->getDisplayName() : $this->t('Unknown user');
 
     $reported_status = $entity->getReportedStatus();
     $row['reported_status'] = $reported_status ? $reported_status->label() : $this->t('n/a');

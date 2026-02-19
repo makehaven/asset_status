@@ -17,3 +17,11 @@ asset_status.asset_log_entry_type.*:
     default_workflow_state:
       type: string
       label: 'Default workflow state'
+
+asset_status.settings:
+  type: config_object
+  label: 'Asset status settings'
+  mapping:
+    history_access_mode:
+      type: string
+      label: 'History access mode'

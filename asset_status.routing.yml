@@ -4,8 +4,7 @@ entity.node.asset_status.maintenance:
     _controller: '\Drupal\asset_status\Controller\AssetLogController::addMaintenance'
     _title: 'Record Maintenance'
   requirements:
-    _permission: 'log asset maintenance events'
-    _entity_bundles: 'node:item'
+    _custom_access: '\Drupal\asset_status\Controller\AssetLogController::accessMaintenance'
     node: \d+
   options:
     _admin_route: TRUE
@@ -16,8 +15,15 @@ entity.node.asset_status.history:
     _controller: '\Drupal\asset_status\Controller\AssetLogController::history'
     _title: 'Maintenance History'
   requirements:
-    _permission: 'access content'
-    _entity_bundles: 'node:item'
+    _custom_access: '\Drupal\asset_status\Controller\AssetLogController::accessHistory'
     node: \d+
   options:
     _admin_route: TRUE
+
+asset_status.settings:
+  path: '/admin/config/content/asset-status'
+  defaults:
+    _form: '\Drupal\asset_status\Form\AssetStatusSettingsForm'
+    _title: 'Asset status settings'
+  requirements:
+    _permission: 'administer asset log entries'

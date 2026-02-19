@@ -43,6 +43,9 @@ maintenance logging module.
    - `review asset status reports`
    - `log asset maintenance events`
    - `administer asset log entries`
+6. Configure module settings at `/admin/config/content/asset-status`:
+   - Choose whether maintenance history is visible to all authenticated users
+     or restricted to asset-status permissions.
 
 ## Mandatory configuration checklist
 
@@ -56,9 +59,12 @@ Run through these items the first time the module is enabled on an environment:
    also surfaces recent `asset_log_entry` notes.
 3. **Grant permissions** – Assign the three provided permissions to whichever
    staff roles should triage logs and run maintenance workflows.
-4. **Clear caches** – Run `lando drush cr` any time the module definitions
+4. **Set history visibility mode** – At
+   `/admin/config/content/asset-status`, choose whether maintenance history is
+   collaborative (all authenticated users) or permission-gated.
+5. **Clear caches** – Run `lando drush cr` any time the module definitions
    change so Drupal can discover the new entity type and services.
-5. **Smoke test logging** – Edit an `item` node, flip `field_item_status`, and
+6. **Smoke test logging** – Edit an `item` node, flip `field_item_status`, and
    confirm a new `status_change` entry appears under **Content → Asset log**.
 
 ## Manual data model extensions
@@ -81,6 +87,12 @@ code:
    `field_item_slack_channel` populated or inherits one from its area-of-interest
    taxonomy term (`field_interest_slack_channel`). The upcoming Slack queue
    worker will read these values to decide where to broadcast updates.
+5. **Webform handler mapping** – The `Asset Status Updater` webform handler now
+   supports configurable submission keys and issue-value mappings, so adopters
+   can reuse the module even when webform element machine names differ.
+6. **Slack routing audit (optional)** – Use
+   `drush asset-status:slack-audit` to report which `item` nodes resolve a Slack
+   channel via `field_item_slack_channel` or area-interest fallback.
 
 Document any bespoke fields you add in this README so downstream deployers (or
 future AI assistants) know the canonical data structures.
@@ -97,3 +109,8 @@ future AI assistants) know the canonical data structures.
 Keep module comments and docs aligned with Drupal coding standards (PSR-4,
 Drupal CS) and capture future behaviour changes in this README as the module
 evolves.
+
+## Follow-up backlog
+
+Higher-risk integration work is tracked in `TODO.md` (queue-based Slack posting,
+delivery retries, secret handling, and channel coverage operations).

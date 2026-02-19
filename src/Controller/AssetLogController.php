@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\asset_status\Controller;
 
+use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\EntityFormBuilderInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\node\NodeInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -57,6 +59,46 @@ final class AssetLogController extends ControllerBase {
   }
 
   /**
+   * Access callback for the maintenance form route.
+   */
+  public function accessMaintenance(NodeInterface $node, AccountInterface $account): AccessResult {
+    if ($node->bundle() !== 'item') {
+      return AccessResult::forbidden()->addCacheableDependency($node);
+    }
+
+    $can_log = AccessResult::allowedIfHasPermissions($account, [
+      'administer asset log entries',
+      'log asset maintenance events',
+    ], 'OR')->cachePerPermissions();
+
+    return $node->access('view', $account, TRUE)->andIf($can_log);
+  }
+
+  /**
+   * Access callback for the maintenance history route.
+   */
+  public function accessHistory(NodeInterface $node, AccountInterface $account): AccessResult {
+    if ($node->bundle() !== 'item') {
+      return AccessResult::forbidden()->addCacheableDependency($node);
+    }
+
+    $mode = (string) $this->config('asset_status.settings')->get('history_access_mode');
+    if ($mode === 'permission') {
+      $can_review = AccessResult::allowedIfHasPermissions($account, [
+        'administer asset log entries',
+        'review asset status reports',
+        'log asset maintenance events',
+      ], 'OR')->cachePerPermissions();
+    }
+    else {
+      // Keep history collaborative for logged-in members/volunteers/staff.
+      $can_review = AccessResult::allowedIf($account->isAuthenticated())->cachePerUser();
+    }
+
+    return $node->access('view', $account, TRUE)->andIf($can_review);
+  }
+
+  /**
    * Displays the asset log history for a node.
    */
   public function history(NodeInterface $node) {
@@ -66,7 +108,7 @@ final class AssetLogController extends ControllerBase {
       ->condition('asset', $node->id())
       ->sort('created', 'DESC')
       ->pager(20)
-      ->accessCheck(TRUE);
+      ->accessCheck(FALSE);
     
     $ids = $query->execute();
     $logs = $storage->loadMultiple($ids);
@@ -88,13 +130,9 @@ final class AssetLogController extends ControllerBase {
     foreach ($logs as $log) {
       $build['#rows'][] = [
         ['data' => $this->dateFormatter()->format($log->getCreatedTime(), 'short')],
-        ['data' => $log->getOwner()->getDisplayName()],
+        ['data' => $log->getOwner() ? $log->getOwner()->getDisplayName() : $this->t('Unknown user')],
         ['data' => $log->bundle()],
-        ['data' => [
-          '#type' => 'link',
-          '#title' => $log->label(),
-          '#url' => $log->toUrl(),
-        ]],
+        ['data' => $log->label()],
         ['data' => $log->getConfirmedStatus() ? $log->getConfirmedStatus()->label() : '-'],
       ];
     }

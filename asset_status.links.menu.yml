@@ -11,3 +11,10 @@ asset_status.asset_log_entry_type_collection:
   description: 'Manage log entry bundles for different workflows.'
   parent: system.admin_structure
   weight: 25
+
+asset_status.settings:
+  title: 'Asset status settings'
+  route_name: asset_status.settings
+  description: 'Configure asset history visibility and workflow defaults.'
+  parent: system.admin_config_content
+  weight: 50

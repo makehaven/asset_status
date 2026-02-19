@@ -279,22 +279,55 @@ final class AssetLogEntry extends ContentEntityBase implements AssetLogEntryInte
     $confirmed_status = $this->getConfirmedStatus();
     $asset = $this->getAsset();
 
-    if ($confirmed_status && $asset && $asset->hasField('field_item_status')) {
-      $current_status_id = $asset->get('field_item_status')->target_id;
-      if ((int) $current_status_id !== (int) $confirmed_status->id()) {
-        // Update the asset's status to match the confirmed status.
-        $asset->set('field_item_status', $confirmed_status->id());
-
-        // We set a flag to avoid triggering the automatic StatusChangeLogger,
-        // since THIS log entry already serves as the record for the change.
-        $asset->_skip_asset_status_log = TRUE;
-
-        // Ensure Slack still gets notified by passing the log message.
-        $asset->_asset_status_log_message = $this->getSummary();
-
-        $asset->save();
-      }
+    if (!$confirmed_status || !$asset || !$asset->hasField('field_item_status')) {
+      return;
     }
+
+    $should_sync = !$update;
+    if ($update) {
+      $original_status_id = isset($this->original) ? (int) $this->original->get('confirmed_status')->target_id : 0;
+      $current_entry_status_id = (int) $this->get('confirmed_status')->target_id;
+      $should_sync = $original_status_id !== $current_entry_status_id && $this->isMostRecentForAsset((int) $asset->id());
+    }
+
+    if (!$should_sync) {
+      return;
+    }
+
+    $current_status_id = $asset->get('field_item_status')->target_id;
+    if ((int) $current_status_id !== (int) $confirmed_status->id()) {
+      // Update the asset's status to match the confirmed status.
+      $asset->set('field_item_status', $confirmed_status->id());
+
+      // We set a flag to avoid triggering the automatic StatusChangeLogger,
+      // since THIS log entry already serves as the record for the change.
+      $asset->_skip_asset_status_log = TRUE;
+
+      // Ensure Slack still gets notified by passing the log message.
+      $asset->_asset_status_log_message = $this->getSummary();
+
+      $asset->save();
+    }
+  }
+
+  /**
+   * Returns TRUE when this entry is the newest log for the given asset.
+   */
+  private function isMostRecentForAsset(int $assetId): bool {
+    $ids = \Drupal::entityTypeManager()->getStorage('asset_log_entry')
+      ->getQuery()
+      ->condition('asset', $assetId)
+      ->sort('created', 'DESC')
+      ->sort('id', 'DESC')
+      ->range(0, 1)
+      ->accessCheck(FALSE)
+      ->execute();
+
+    if (empty($ids)) {
+      return FALSE;
+    }
+
+    return (int) reset($ids) === (int) $this->id();
   }
 
   /**

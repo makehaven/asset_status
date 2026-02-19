@@ -1,0 +1,7 @@
+services:
+  asset_status.commands:
+    class: Drupal\asset_status\Commands\AssetStatusCommands
+    arguments:
+      - '@entity_type.manager'
+    tags:
+      - { name: drush.command }

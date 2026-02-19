@@ -78,7 +78,7 @@ final class StatusChangeLogger {
       'details' => $details,
       'reported_status' => $currentStatus ? $currentStatus->id() : NULL,
       'confirmed_status' => $currentStatus ? $currentStatus->id() : NULL,
-      'user_id' => $this->resolveActingUserId($context),
+      'user_id' => $this->resolveActingUserId($asset, $context),
     ];
 
     try {
@@ -172,13 +172,22 @@ final class StatusChangeLogger {
   /**
    * Determines the acting user ID for the log entry.
    */
-  private function resolveActingUserId(array $context): int {
+  private function resolveActingUserId(NodeInterface $asset, array $context): int {
     if (!empty($context['user_id']) && (int) $context['user_id'] > 0) {
       return (int) $context['user_id'];
     }
 
     $uid = (int) $this->currentUser->id();
-    return $uid > 0 ? $uid : 1;
+    if ($uid > 0) {
+      return $uid;
+    }
+
+    $asset_owner_id = (int) $asset->getOwnerId();
+    if ($asset_owner_id > 0) {
+      return $asset_owner_id;
+    }
+
+    return 1;
   }
 
 }

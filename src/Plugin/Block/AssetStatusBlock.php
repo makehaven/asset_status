@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace Drupal\asset_status\Plugin\Block;
 
 use Drupal\Core\Block\BlockBase;
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\Core\Url;
+use Drupal\Core\Access\AccessManagerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\node\NodeInterface;
 
@@ -40,12 +43,28 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
   protected $routeMatch;
 
   /**
+   * The access manager.
+   *
+   * @var \Drupal\Core\Access\AccessManagerInterface
+   */
+  protected $accessManager;
+
+  /**
+   * The current user.
+   *
+   * @var \Drupal\Core\Session\AccountProxyInterface
+   */
+  protected $currentUser;
+
+  /**
    * Constructs a new AssetStatusBlock.
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, RouteMatchInterface $route_match) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, RouteMatchInterface $route_match, AccessManagerInterface $access_manager, AccountProxyInterface $current_user) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
     $this->entityTypeManager = $entity_type_manager;
     $this->routeMatch = $route_match;
+    $this->accessManager = $access_manager;
+    $this->currentUser = $current_user;
   }
 
   /**
@@ -57,7 +76,9 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
       $plugin_id,
       $plugin_definition,
       $container->get('entity_type.manager'),
-      $container->get('current_route_match')
+      $container->get('current_route_match'),
+      $container->get('access_manager'),
+      $container->get('current_user')
     );
   }
 
@@ -86,7 +107,7 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
       ->condition('asset', $node->id())
       ->sort('created', 'DESC')
       ->range(0, 1)
-      ->accessCheck(TRUE)
+      ->accessCheck(FALSE)
       ->execute();
 
     $latest_message = '';
@@ -117,7 +138,13 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
     $css_class = $class_map[$status_label] ?? 'status-unknown';
 
     // Generate history URL.
-    $history_url = Url::fromRoute('entity.node.asset_status.history', ['node' => $node->id()])->toString();
+    $history_url = NULL;
+    $history_access = $this->accessManager->checkNamedRoute('entity.node.asset_status.history', [
+      'node' => $node->id(),
+    ], $this->currentUser, TRUE);
+    if ($history_access->isAllowed()) {
+      $history_url = Url::fromRoute('entity.node.asset_status.history', ['node' => $node->id()])->toString();
+    }
 
     // Build the render array.
     $build = [
@@ -132,7 +159,9 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
         ],
       ],
       '#cache' => [
-        'tags' => array_merge($node->getCacheTags(), ['asset_log_entry_list']),
+        'tags' => Cache::mergeTags($node->getCacheTags(), ['asset_log_entry_list']),
+        'contexts' => Cache::mergeContexts(['user.permissions'], $history_access->getCacheContexts()),
+        'max-age' => $history_access->getCacheMaxAge(),
       ],
     ];
 
