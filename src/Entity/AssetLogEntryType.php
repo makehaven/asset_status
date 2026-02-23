@@ -19,6 +19,9 @@ use Drupal\Core\Config\Entity\ConfigEntityBundleBase;
  *       "edit" = "Drupal\asset_status\Form\AssetLogEntryTypeForm",
  *       "delete" = "Drupal\asset_status\Form\AssetLogEntryTypeDeleteForm"
  *     },
+ *     "route_provider" = {
+ *       "html" = "Drupal\Core\Entity\Routing\AdminHtmlRouteProvider"
+ *     },
  *     "list_builder" = "Drupal\asset_status\AssetLogEntryTypeListBuilder"
  *   },
  *   config_prefix = "asset_log_entry_type",
