@@ -36,18 +36,43 @@ final class MaintenanceDashboardController extends ControllerBase {
   }
 
   /**
+   * Status labels that are NOT maintenance issues and should be excluded from
+   * the "offline" section of the dashboard. "Gone" = tool removed from space;
+   * "Storage"/"Setup" = administrative; "Operational"/"Reported Concern" are
+   * handled separately.
+   */
+  private const EXCLUDED_FROM_OFFLINE = [
+    'Operational',
+    'Reported Concern',
+    'Gone',
+    'Storage',
+    'Setup',
+  ];
+
+  /**
    * Renders the maintenance dashboard.
    */
   public function dashboard(): array {
-    $concern_term  = $this->getTermByLabel('Reported Concern');
-    $degraded_term = $this->getTermByLabel('Degraded');
-    $oos_term      = $this->getTermByLabel('Out of Service');
+    $concern_term = $this->getTermByLabel('Reported Concern');
+    $offline_terms = $this->getOfflineTerms();
 
     $queue_nodes = $concern_term ? $this->getNodesByStatus([$concern_term]) : [];
-    $down_nodes  = $this->getNodesByStatus(array_filter([$degraded_term, $oos_term]));
+    $down_nodes  = $this->getNodesByStatus($offline_terms);
 
-    $degraded_count = $degraded_term ? count($this->getNodesByStatus([$degraded_term])) : 0;
-    $oos_count      = $oos_term ? count($this->getNodesByStatus([$oos_term])) : 0;
+    // Stats: count by severity bucket.
+    $degraded_count = 0;
+    $oos_count = 0;
+    foreach ($down_nodes as $node) {
+      $term = $node->get('field_item_status')->entity;
+      $label = $term ? $term->label() : '';
+      // Treat "Out of Service", "Gone", and any hard-down equivalents as OOS.
+      if (in_array($label, ['Out of Service', 'Gone', 'Offline for Maintenance'], TRUE)) {
+        $oos_count++;
+      }
+      else {
+        $degraded_count++;
+      }
+    }
 
     $build = [];
 
@@ -60,10 +85,10 @@ final class MaintenanceDashboardController extends ControllerBase {
         '#markup' => '<div class="stat-item stat-concern"><span class="stat-number">' . count($queue_nodes) . '</span><span class="stat-label">Needs Review</span></div>',
       ],
       'degraded_stat' => [
-        '#markup' => '<div class="stat-item stat-degraded"><span class="stat-number">' . $degraded_count . '</span><span class="stat-label">Degraded</span></div>',
+        '#markup' => '<div class="stat-item stat-degraded"><span class="stat-number">' . $degraded_count . '</span><span class="stat-label">Impaired</span></div>',
       ],
       'oos_stat' => [
-        '#markup' => '<div class="stat-item stat-oos"><span class="stat-number">' . $oos_count . '</span><span class="stat-label">Out of Service</span></div>',
+        '#markup' => '<div class="stat-item stat-oos"><span class="stat-number">' . $oos_count . '</span><span class="stat-label">Offline</span></div>',
       ],
     ];
 
@@ -145,7 +170,8 @@ final class MaintenanceDashboardController extends ControllerBase {
         $status_label = $current_term ? $current_term->label() : '';
         $log = $this->getLatestLog($node, 'status_change');
         $last_note = $log ? ($log->getDetails() ?: $log->getSummary()) : '';
-        $row_class = $status_label === 'Out of Service' ? 'maintenance-row-oos' : 'maintenance-row-degraded';
+        $hard_down = ['Out of Service', 'Gone', 'Offline for Maintenance'];
+        $row_class = in_array($status_label, $hard_down, TRUE) ? 'maintenance-row-oos' : 'maintenance-row-degraded';
 
         $down_rows[] = [
           'class' => [$row_class],
@@ -226,15 +252,15 @@ final class MaintenanceDashboardController extends ControllerBase {
     $seconds = \Drupal::time()->getRequestTime() - $since;
 
     if ($seconds < 3600) {
-      return $this->t('@m min', ['@m' => max(1, (int) round($seconds / 60))]);
+      return (string) $this->t('@m min', ['@m' => max(1, (int) round($seconds / 60))]);
     }
     if ($seconds < 86400) {
-      return $this->t('@h hr', ['@h' => (int) round($seconds / 3600)]);
+      return (string) $this->t('@h hr', ['@h' => (int) round($seconds / 3600)]);
     }
     if ($seconds < 86400 * 30) {
-      return $this->t('@d days', ['@d' => (int) round($seconds / 86400)]);
+      return (string) $this->t('@d days', ['@d' => (int) round($seconds / 86400)]);
     }
-    return $this->t('@w wk', ['@w' => (int) round($seconds / 604800)]);
+    return (string) $this->t('@w wk', ['@w' => (int) round($seconds / 604800)]);
   }
 
   /**
@@ -270,6 +296,24 @@ final class MaintenanceDashboardController extends ControllerBase {
       return str_replace('_', ' ', $m[1]);
     }
     return $summary;
+  }
+
+  /**
+   * Returns all item_status terms that represent maintenance-actionable offline
+   * states, dynamically excluding administrative/non-maintenance labels.
+   *
+   * This avoids hardcoding environment-specific term names like "Offline for
+   * Maintenance" vs "Degraded" and automatically picks up any future terms.
+   *
+   * @return \Drupal\taxonomy\TermInterface[]
+   */
+  private function getOfflineTerms(): array {
+    $all_terms = $this->entityTypeManager->getStorage('taxonomy_term')
+      ->loadByProperties(['vid' => 'item_status']);
+    return array_values(array_filter(
+      $all_terms,
+      fn($t) => !in_array($t->label(), self::EXCLUDED_FROM_OFFLINE, TRUE)
+    ));
   }
 
   /**
