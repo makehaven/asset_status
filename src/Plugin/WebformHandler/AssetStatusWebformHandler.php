@@ -196,43 +196,45 @@ final class AssetStatusWebformHandler extends WebformHandlerBase {
       return;
     }
 
-    // 2. Map Issue Type to Status.
+    // 2. Determine what severity the member believes the issue is (for the log
+    // record), but always land the tool in 'Reported Concern' so staff must
+    // confirm before it is marked Degraded or Out of Service.
     $data = $webform_submission->getData();
     $issue_type = $data[$issue_type_key] ?? 'unknown';
-    
-    $new_status_label = 'Degraded';
+
     $out_of_service_values = $this->parseConfiguredList((string) $this->configuration['out_of_service_values']);
     $degraded_values = $this->parseConfiguredList((string) $this->configuration['degraded_values']);
 
+    // Member's self-assessed severity — stored in reported_status for staff.
+    $member_severity_label = 'Degraded';
     if (in_array($issue_type, $out_of_service_values, TRUE)) {
-      $new_status_label = 'Out of Service';
+      $member_severity_label = 'Out of Service';
     }
     elseif (in_array($issue_type, $degraded_values, TRUE)) {
-      $new_status_label = 'Degraded';
+      $member_severity_label = 'Degraded';
     }
+    $member_severity_term = $this->assetAvailability->getTermByLabel($member_severity_label);
 
-    // 3. Prepare the Log Message.
+    // 3. Prepare the log message.
     $description = $data[$description_key] ?? '';
     $user_name = $webform_submission->getOwner()->getDisplayName();
     $log_message = "Member Report ($user_name): $description";
 
-    // 4. Update status only when escalating severity. Otherwise record a report
-    // without changing the current status.
-    $term = $this->assetAvailability->getTermByLabel($new_status_label);
+    // 4. Escalate to 'Reported Concern' — only if not already at a worse status.
+    // This puts it in the staff review queue without prematurely marking it broken.
+    $concern_term = $this->assetAvailability->getTermByLabel('Reported Concern');
     $current_term = $node->get('field_item_status')->entity;
     $current_label = $current_term ? $current_term->label() : NULL;
 
-    if ($term && $this->shouldEscalateStatus($current_label, $new_status_label)) {
-      if ((int) $node->get('field_item_status')->target_id !== (int) $term->id()) {
-        // Attach the log message so hook_entity_update sees it.
-        $node->_asset_status_log_message = $log_message;
-        $node->set('field_item_status', $term->id());
-        $node->save();
-      }
-      $this->messenger()->addStatus($this->t('Asset status updated to @status.', ['@status' => $new_status_label]));
-      return;
+    if ($concern_term && $this->shouldEscalateStatus($current_label, 'Reported Concern')) {
+      $node->_asset_status_log_message = $log_message;
+      $node->set('field_item_status', $concern_term->id());
+      $node->save();
     }
 
+    // 5. Always create an inspection log entry recording the member's report.
+    // reported_status reflects what the member thinks; staff will set
+    // confirmed_status when they review via the maintenance dashboard.
     $owner = $webform_submission->getOwner();
     $uid = $owner ? (int) $owner->id() : 0;
     if ($uid <= 0) {
@@ -247,10 +249,12 @@ final class AssetStatusWebformHandler extends WebformHandlerBase {
       'asset' => $node->id(),
       'summary' => (string) $this->t('Member issue report (@issue)', ['@issue' => $issue_type]),
       'details' => $log_message,
-      'reported_status' => $term ? $term->id() : NULL,
-      'confirmed_status' => $node->get('field_item_status')->target_id ?: NULL,
+      'reported_status' => $member_severity_term ? $member_severity_term->id() : NULL,
+      'confirmed_status' => NULL,
       'user_id' => $uid,
     ])->save();
+
+    $this->messenger()->addStatus($this->t('Your report has been submitted. Staff will review and confirm the status.'));
   }
 
   /**
@@ -259,10 +263,11 @@ final class AssetStatusWebformHandler extends WebformHandlerBase {
   private function shouldEscalateStatus(?string $current, string $requested): bool {
     $rank = [
       'Operational' => 0,
-      'Degraded' => 1,
-      'Setup / Training Only' => 1,
-      'Out of Service' => 2,
-      'Storage' => 2,
+      'Reported Concern' => 1,
+      'Degraded' => 2,
+      'Setup / Training Only' => 2,
+      'Out of Service' => 3,
+      'Storage' => 3,
     ];
 
     $requested_rank = $rank[$requested] ?? NULL;

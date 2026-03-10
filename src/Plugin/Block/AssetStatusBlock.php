@@ -126,6 +126,7 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
     $class_map = [
       'Operational' => 'status-operational',
       'Active' => 'status-operational', // Legacy
+      'Reported Concern' => 'status-reported-concern',
       'Degraded' => 'status-degraded',
       'Maintenance' => 'status-degraded', // Legacy
       'Out of Service' => 'status-out-of-service',

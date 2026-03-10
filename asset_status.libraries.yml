@@ -2,3 +2,8 @@ asset_status_block:
   css:
     component:
       css/asset_status_block.css: {}
+
+maintenance_dashboard:
+  css:
+    component:
+      css/maintenance_dashboard.css: {}

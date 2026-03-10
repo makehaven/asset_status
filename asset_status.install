@@ -47,3 +47,32 @@ function asset_status_update_10001(): void {
     }
   }
 }
+
+/**
+ * Adds the 'Reported Concern' status term for member-reported issues.
+ *
+ * Member issue reports now land in this intermediate state rather than
+ * escalating directly to Degraded or Out of Service. Staff must review
+ * and confirm the severity via the maintenance dashboard.
+ */
+function asset_status_update_10002(): void {
+  $vid = 'item_status';
+  $vocab_storage = \Drupal::entityTypeManager()->getStorage('taxonomy_vocabulary');
+  if (!$vocab_storage->load($vid)) {
+    return;
+  }
+
+  $term_storage = \Drupal::entityTypeManager()->getStorage('taxonomy_term');
+  $existing = $term_storage->loadByProperties([
+    'vid' => $vid,
+    'name' => 'Reported Concern',
+  ]);
+
+  if (!$existing) {
+    Term::create([
+      'vid' => $vid,
+      'name' => 'Reported Concern',
+      'description' => 'A member has flagged a potential issue. Pending staff review before confirming severity.',
+    ])->save();
+  }
+}

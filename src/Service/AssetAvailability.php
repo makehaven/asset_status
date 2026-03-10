@@ -19,9 +19,12 @@ final class AssetAvailability {
 
   /**
    * Statuses that imply the asset is usable by members.
+   *
+   * 'Reported Concern' is usable — the issue has not been confirmed by staff.
    */
   private const USABLE_STATUSES = [
     'Operational',
+    'Reported Concern',
     'Degraded',
   ];
 
@@ -62,6 +65,16 @@ final class AssetAvailability {
    */
   public function getOutOfServiceTerm(): ?TermInterface {
     return $this->getTermByLabel('Out of Service');
+  }
+
+  /**
+   * Helper to retrieve the "Reported Concern" term.
+   *
+   * This is the intermediate state that member reports land in before
+   * staff confirm severity via the maintenance dashboard.
+   */
+  public function getReportedConcernTerm(): ?TermInterface {
+    return $this->getTermByLabel('Reported Concern');
   }
 
   /**

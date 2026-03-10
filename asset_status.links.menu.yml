@@ -1,3 +1,10 @@
+asset_status.maintenance_dashboard:
+  title: 'Maintenance Queue'
+  route_name: asset_status.maintenance_dashboard
+  description: 'Review member-reported tool issues and manage equipment status.'
+  parent: system.admin_content
+  weight: 19
+
 asset_status.asset_log_entry_collection:
   title: 'Asset log entries'
   route_name: entity.asset_log_entry.collection

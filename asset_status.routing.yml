@@ -27,3 +27,24 @@ asset_status.settings:
     _title: 'Asset status settings'
   requirements:
     _permission: 'administer asset log entries'
+
+asset_status.maintenance_dashboard:
+  path: '/admin/content/asset-maintenance'
+  defaults:
+    _controller: '\Drupal\asset_status\Controller\MaintenanceDashboardController::dashboard'
+    _title: 'Maintenance Queue'
+  requirements:
+    _permission: 'review asset status reports'
+  options:
+    _admin_route: TRUE
+
+asset_status.quick_status_update:
+  path: '/admin/content/asset-maintenance/update/{node}'
+  defaults:
+    _form: '\Drupal\asset_status\Form\AssetQuickStatusForm'
+    _title: 'Update Tool Status'
+  requirements:
+    _permission: 'review asset status reports'
+    node: \d+
+  options:
+    _admin_route: TRUE
