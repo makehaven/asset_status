@@ -3,6 +3,7 @@ type: module
 description: 'Provides structured asset status tracking, logging, and reporting tools.'
 core_version_requirement: ^10 || ^11
 package: Makerspace
+configure: asset_status.maintenance_dashboard
 dependencies:
   - drupal:node
   - drupal:taxonomy

@@ -6,6 +6,7 @@ namespace Drupal\asset_status\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Url;
 
 /**
  * Configuration form for asset status module settings.
@@ -31,6 +32,15 @@ final class AssetStatusSettingsForm extends ConfigFormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state): array {
     $config = $this->config('asset_status.settings');
+
+    $form['quick_links'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'p',
+      '#value' => $this->t('Quick links: <a href=":dashboard">Maintenance Queue dashboard</a> &nbsp;|&nbsp; <a href=":log">Asset log entries</a>', [
+        ':dashboard' => Url::fromRoute('asset_status.maintenance_dashboard')->toString(),
+        ':log' => Url::fromRoute('entity.asset_log_entry.collection')->toString(),
+      ]),
+    ];
 
     $form['history_access_mode'] = [
       '#type' => 'radios',
