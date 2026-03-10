@@ -7,3 +7,8 @@ maintenance_dashboard:
   css:
     component:
       css/maintenance_dashboard.css: {}
+
+status_board:
+  css:
+    component:
+      css/status_board.css: {}

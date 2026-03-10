@@ -28,6 +28,14 @@ asset_status.settings:
   requirements:
     _permission: 'administer asset log entries'
 
+asset_status.tool_status_board:
+  path: '/equipment/status'
+  defaults:
+    _controller: '\Drupal\asset_status\Controller\ToolStatusBoardController::board'
+    _title: 'Equipment Status'
+  requirements:
+    _permission: 'access content'
+
 asset_status.maintenance_dashboard:
   path: '/admin/content/asset-maintenance'
   defaults:

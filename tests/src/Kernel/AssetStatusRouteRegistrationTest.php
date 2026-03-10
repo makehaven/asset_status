@@ -81,6 +81,17 @@ class AssetStatusRouteRegistrationTest extends KernelTestBase {
   }
 
   /**
+   * Tests that the public tool status board route is registered.
+   */
+  public function testToolStatusBoardRouteRegistered(): void {
+    $route_provider = $this->container->get('router.route_provider');
+    $route = $route_provider->getRouteByName('asset_status.tool_status_board');
+    $this->assertNotNull($route);
+    $this->assertEquals('/equipment/status', $route->getPath());
+    $this->assertEquals('access content', $route->getRequirement('_permission'));
+  }
+
+  /**
    * Tests that the maintenance dashboard route is registered.
    */
   public function testMaintenanceDashboardRouteRegistered(): void {

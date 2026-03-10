@@ -1,3 +1,10 @@
+asset_status.tool_status_board:
+  title: 'Equipment Status'
+  route_name: asset_status.tool_status_board
+  description: 'Live status board for all tools — green/red indicators, filter by status, time offline.'
+  parent: system.admin_content
+  weight: 18
+
 asset_status.maintenance_dashboard:
   title: 'Maintenance Queue'
   route_name: asset_status.maintenance_dashboard

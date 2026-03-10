@@ -36,9 +36,10 @@ final class AssetStatusSettingsForm extends ConfigFormBase {
     $form['quick_links'] = [
       '#type' => 'html_tag',
       '#tag' => 'p',
-      '#value' => $this->t('Quick links: <a href=":dashboard">Maintenance Queue dashboard</a> &nbsp;|&nbsp; <a href=":log">Asset log entries</a>', [
+      '#value' => $this->t('Quick links: <a href=":board">Equipment Status Board</a> &nbsp;|&nbsp; <a href=":dashboard">Maintenance Queue</a> &nbsp;|&nbsp; <a href=":log">Asset log entries</a>', [
+        ':board'     => Url::fromRoute('asset_status.tool_status_board')->toString(),
         ':dashboard' => Url::fromRoute('asset_status.maintenance_dashboard')->toString(),
-        ':log' => Url::fromRoute('entity.asset_log_entry.collection')->toString(),
+        ':log'       => Url::fromRoute('entity.asset_log_entry.collection')->toString(),
       ]),
     ];
 

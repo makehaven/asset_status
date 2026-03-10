@@ -1,0 +1,160 @@
+/* Equipment Status Board --------------------------------------------------- */
+
+/* Status light dots */
+.status-light {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.light-green {
+  background: #22c55e;
+  box-shadow: 0 0 5px 1px rgba(34, 197, 94, 0.55);
+}
+
+.light-amber {
+  background: #f59e0b;
+  box-shadow: 0 0 5px 1px rgba(245, 158, 11, 0.55);
+}
+
+.light-red {
+  background: #ef4444;
+  box-shadow: 0 0 5px 1px rgba(239, 68, 68, 0.55);
+}
+
+.light-grey {
+  background: #9ca3af;
+  box-shadow: none;
+}
+
+/* Stats strip */
+.status-board-stats {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  padding: 0.6rem 0;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.stat-dot-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 500;
+}
+
+/* Filter bar */
+.status-board-filter {
+  margin-bottom: 1rem;
+}
+
+.status-filter-form {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.status-filter-form label {
+  font-weight: 500;
+  color: #374151;
+}
+
+.status-filter-form select {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.filter-count {
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+/* Table */
+.tool-status-board-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.tool-status-board-table th {
+  background: #f9fafb;
+  border-bottom: 2px solid #e5e7eb;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.tool-status-board-table th a {
+  color: inherit;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.tool-status-board-table th.is-active {
+  background: #f0f9ff;
+}
+
+.tool-status-board-table td {
+  padding: 0.45rem 0.75rem;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: middle;
+}
+
+.tool-status-board-table .col-light {
+  width: 24px;
+  text-align: center;
+  padding-right: 0;
+}
+
+/* Highlight offline rows */
+.tool-status-board-table tr.row-offline td {
+  background: #fffbf0;
+}
+
+.tool-status-board-table tr.row-offline td:first-child {
+  border-left: 3px solid #f59e0b;
+}
+
+.tool-status-board-table tr.row-offline td:first-child .light-red ~ *,
+.tool-status-board-table tr.row-offline .light-red {
+  border-left-color: #ef4444;
+}
+
+/* Use red left border for fully-offline rows */
+.tool-status-board-table tr.row-offline:has(.light-red) td:first-child {
+  border-left-color: #ef4444;
+}
+
+/* Inline status badge */
+.status-badge-sm {
+  display: inline-block;
+  padding: 0.15em 0.55em;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.status-badge-light-green { background: #dcfce7; color: #166534; }
+.status-badge-light-amber  { background: #fef9c3; color: #713f12; }
+.status-badge-light-red    { background: #fee2e2; color: #7f1d1d; }
+.status-badge-light-grey   { background: #f3f4f6; color: #4b5563; }
+
+/* Time in status */
+.time-in-status {
+  color: #9ca3af;
+  font-variant-numeric: tabular-nums;
+}
+
+.time-offline {
+  color: #b45309;
+  font-weight: 600;
+}
