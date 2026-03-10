@@ -81,6 +81,26 @@ class AssetStatusRouteRegistrationTest extends KernelTestBase {
   }
 
   /**
+   * Tests that the maintenance dashboard route is registered.
+   */
+  public function testMaintenanceDashboardRouteRegistered(): void {
+    $route_provider = $this->container->get('router.route_provider');
+    $route = $route_provider->getRouteByName('asset_status.maintenance_dashboard');
+    $this->assertNotNull($route);
+    $this->assertEquals('/admin/content/asset-maintenance', $route->getPath());
+  }
+
+  /**
+   * Tests that the quick status update route is registered.
+   */
+  public function testQuickStatusUpdateRouteRegistered(): void {
+    $route_provider = $this->container->get('router.route_provider');
+    $route = $route_provider->getRouteByName('asset_status.quick_status_update');
+    $this->assertNotNull($route);
+    $this->assertEquals('/admin/content/asset-maintenance/update/{node}', $route->getPath());
+  }
+
+  /**
    * Tests that the permissions form renders with asset_status enabled.
    */
   public function testPermissionsFormRenders(): void {
