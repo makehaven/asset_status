@@ -49,6 +49,28 @@ function asset_status_update_10001(): void {
 }
 
 /**
+ * Adds the photo image field to the asset_log_entry entity.
+ */
+function asset_status_update_10003(): void {
+  $definition_update_manager = \Drupal::entityDefinitionUpdateManager();
+  $entity_type = $definition_update_manager->getEntityType('asset_log_entry');
+  $field_definitions = \Drupal::service('entity_field.manager')
+    ->getBaseFieldDefinitions('asset_log_entry');
+
+  if (isset($field_definitions['photo'])) {
+    $definition_update_manager->installFieldStorageDefinition(
+      'photo',
+      'asset_log_entry',
+      'asset_status',
+      $field_definitions['photo']
+    );
+  }
+
+  // Make summary field nullable (was required=TRUE, now required=FALSE).
+  // The column itself doesn't change; only the entity validation metadata.
+}
+
+/**
  * Adds the 'Reported Concern' status term for member-reported issues.
  *
  * Member issue reports now land in this intermediate state rather than

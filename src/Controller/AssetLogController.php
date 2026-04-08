@@ -43,7 +43,7 @@ final class AssetLogController extends ControllerBase {
   }
 
   /**
-   * Provides the add maintenance log form.
+   * Provides the add maintenance log form with inline recent history.
    *
    * Pre-populates the asset reference.
    */
@@ -54,8 +54,60 @@ final class AssetLogController extends ControllerBase {
       'asset' => $node->id(),
     ]);
 
-    // Return the form.
-    return $this->entityFormBuilder->getForm($entity);
+    $build = [];
+    $build['form'] = $this->entityFormBuilder->getForm($entity);
+
+    // Load and render the most recent log entries for this asset inline.
+    $storage = $this->entityTypeManager->getStorage('asset_log_entry');
+    $ids = $storage->getQuery()
+      ->condition('asset', $node->id())
+      ->sort('created', 'DESC')
+      ->range(0, 5)
+      ->accessCheck(FALSE)
+      ->execute();
+
+    if (!empty($ids)) {
+      $logs = $storage->loadMultiple($ids);
+
+      $rows = [];
+      /** @var \Drupal\asset_status\Entity\AssetLogEntryInterface $log */
+      foreach ($logs as $log) {
+        $status_label = $log->getConfirmedStatus() ? $log->getConfirmedStatus()->label() : '—';
+        $owner_name = $log->getOwner() ? $log->getOwner()->getDisplayName() : $this->t('Unknown');
+        $details = $log->getDetails();
+        $rows[] = [
+          'data' => [
+            ['data' => $this->dateFormatter()->format($log->getCreatedTime(), 'short')],
+            ['data' => $owner_name],
+            ['data' => $log->label()],
+            ['data' => $status_label],
+            ['data' => $details ? ['#markup' => nl2br(htmlspecialchars($details, ENT_QUOTES, 'UTF-8'))] : '—'],
+          ],
+        ];
+      }
+
+      $build['recent_history'] = [
+        '#type' => 'details',
+        '#title' => $this->t('Recent maintenance history (@count)', ['@count' => count($logs)]),
+        '#open' => TRUE,
+        '#weight' => 100,
+        'table' => [
+          '#type' => 'table',
+          '#header' => [
+            $this->t('Date'),
+            $this->t('By'),
+            $this->t('Summary'),
+            $this->t('Status'),
+            $this->t('Details'),
+          ],
+          '#rows' => $rows,
+          '#empty' => $this->t('No previous maintenance entries.'),
+          '#attributes' => ['class' => ['asset-maintenance-history-table']],
+        ],
+      ];
+    }
+
+    return $build;
   }
 
   /**

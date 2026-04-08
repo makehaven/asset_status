@@ -119,7 +119,7 @@ final class AssetLogEntry extends ContentEntityBase implements AssetLogEntryInte
         'max_length' => 255,
         'text_processing' => 0,
       ])
-      ->setRequired(TRUE)
+      ->setRequired(FALSE)
       ->setDisplayOptions('form', [
         'type' => 'string_textfield',
         'weight' => -20,
@@ -139,6 +139,37 @@ final class AssetLogEntry extends ContentEntityBase implements AssetLogEntryInte
       ])
       ->setDisplayConfigurable('view', TRUE)
       ->setDisplayConfigurable('form', TRUE);
+
+    $fields['photo'] = BaseFieldDefinition::create('image')
+      ->setLabel(t('Photo'))
+      ->setDescription(t('Optional photo documenting the issue or repair.'))
+      ->setSettings([
+        'file_extensions' => 'png gif jpg jpeg webp',
+        'file_directory' => 'asset-maintenance',
+        'alt_field' => FALSE,
+        'alt_field_required' => FALSE,
+        'title_field' => FALSE,
+        'max_resolution' => '2000x2000',
+      ])
+      ->setDisplayOptions('form', [
+        'type' => 'image_image',
+        'weight' => 12,
+        'settings' => [
+          'preview_image_style' => 'thumbnail',
+          'progress_indicator' => 'throbber',
+        ],
+      ])
+      ->setDisplayOptions('view', [
+        'label' => 'above',
+        'type' => 'image',
+        'weight' => 12,
+        'settings' => [
+          'image_style' => 'medium',
+          'image_link' => 'file',
+        ],
+      ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE);
 
     $fields['asset'] = BaseFieldDefinition::create('entity_reference')
       ->setLabel(t('Asset'))
@@ -265,6 +296,22 @@ final class AssetLogEntry extends ContentEntityBase implements AssetLogEntryInte
     parent::preCreate($storage, $values);
     if (!isset($values['user_id']) && \Drupal::currentUser()) {
       $values['user_id'] = \Drupal::currentUser()->id();
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function preSave(EntityStorageInterface $storage): void {
+    parent::preSave($storage);
+
+    // Auto-generate a summary title if none was provided.
+    if (empty($this->getSummary())) {
+      $asset = $this->getAsset();
+      $asset_label = $asset ? $asset->label() : 'Asset';
+      $date = \Drupal::service('date.formatter')
+        ->format(\Drupal::time()->getRequestTime(), 'custom', 'M j, Y');
+      $this->setSummary('Maintenance – ' . $asset_label . ' – ' . $date);
     }
   }
 
