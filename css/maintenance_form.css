@@ -1,49 +1,58 @@
 /**
  * Maintenance log form — mobile-friendly styles.
+ *
+ * Actual DOM (Bootstrap Barrio theme):
+ *   fieldset.asset-confirmed-status-radios
+ *     legend
+ *     div.fieldset-wrapper
+ *       div.radio                        ← grid goes here
+ *         div.status-radio-item.form-check[data-status="..."]
+ *           input.form-check-input       ← visually hidden
+ *           label.form-check-label       ← styled as tap button
  */
 
-/* ── Confirmed status: tap-friendly radio button grid ─────────────────────── */
+/* ── 1. Grid container ───────────────────────────────────────────────────── */
 
-/*
- * The radios wrapper div gets .asset-confirmed-status-radios.
- * Its direct children are .status-radio-item divs (the individual radio items).
- * If a theme inserts a .fieldset__wrapper between them, target that too.
- */
-.asset-confirmed-status-radios,
-.asset-confirmed-status-radios .fieldset__wrapper {
+fieldset.asset-confirmed-status-radios .fieldset-wrapper .radio {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  margin-top: 6px;
 }
 
-/* Prevent fieldset from adding unwanted padding/border if it's in the chain */
-.asset-confirmed-status-radios fieldset {
+/* Suppress fieldset chrome — legend is redundant (outer wrapper has label) */
+fieldset.asset-confirmed-status-radios {
   border: none;
   padding: 0;
   margin: 0;
-  display: contents;
+}
+fieldset.asset-confirmed-status-radios > legend {
+  display: none;
 }
 
-/* Each radio item wrapper */
-.status-radio-item {
-  margin: 0;
+/* ── 2. Individual radio items — override Bootstrap .form-check ──────────── */
+
+.status-radio-item.form-check {
+  padding-left: 0;    /* Bootstrap adds 1.5em indent for the radio circle */
+  margin-bottom: 0;
 }
 
-/* Visually hide the native radio circle while keeping it keyboard-accessible */
-.status-radio-item input[type="radio"] {
+/* Visually hide the native radio; override Bootstrap's float: left */
+.status-radio-item input[type="radio"].form-check-input {
   position: absolute;
   opacity: 0;
   width: 1px;
   height: 1px;
+  float: none;
   margin: 0;
+  pointer-events: none;
 }
 
-/* Style the label as a large tappable button */
-.status-radio-item label {
+/* Style the label as a large tap button */
+.status-radio-item label.form-check-label {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
   min-height: 56px;
   padding: 10px 8px;
   text-align: center;
@@ -55,19 +64,22 @@
   line-height: 1.3;
   background: #f0f0f0;
   color: #444;
+  box-sizing: border-box;
+  margin-bottom: 0;
   -webkit-tap-highlight-color: transparent;
 }
 
-.status-radio-item input[type="radio"]:focus-visible + label {
+.status-radio-item input[type="radio"]:focus-visible ~ label {
   outline: 3px solid #1a6bbf;
   outline-offset: 2px;
 }
 
-/* "- None -" option: full-width at top, muted */
+/* ── 3. "- None -" spans full width, styled as a muted link ─────────────── */
+
 .status-radio-item:not([data-status]) {
   grid-column: 1 / -1;
 }
-.status-radio-item:not([data-status]) label {
+.status-radio-item:not([data-status]) label.form-check-label {
   min-height: 36px;
   font-style: italic;
   color: #999;
@@ -75,83 +87,80 @@
   background: #fafafa;
 }
 
-/* ── Color coding via data-status on the wrapper div ──────────────────────── */
-/* data-status is set by addStatusRadioClasses() via #wrapper_attributes      */
-/* Unselected: tinted border + light background                               */
-/* Selected (:has): deeper fill, heavier border, bold text                   */
+/* ── 4. Color coding via data-status on the wrapper div ──────────────────── */
 
-.status-radio-item[data-status="operational"] label {
+.status-radio-item[data-status="operational"] label.form-check-label {
   border-color: #388e3c;
   background: #f1faf1;
   color: #1b5e20;
 }
-.status-radio-item[data-status="operational"]:has(input:checked) label {
+.status-radio-item[data-status="operational"]:has(input:checked) label.form-check-label {
   background: #c8e6c9;
   border-width: 3px;
   font-weight: 700;
 }
 
-.status-radio-item[data-status="degraded"] label {
+.status-radio-item[data-status="degraded"] label.form-check-label {
   border-color: #d68100;
   background: #fff8f0;
   color: #6d3a00;
 }
-.status-radio-item[data-status="degraded"]:has(input:checked) label {
+.status-radio-item[data-status="degraded"]:has(input:checked) label.form-check-label {
   background: #ffe0b2;
   border-width: 3px;
   font-weight: 700;
 }
 
-.status-radio-item[data-status="concern"] label {
+.status-radio-item[data-status="concern"] label.form-check-label {
   border-color: #e6a817;
   background: #fffde7;
   color: #5d4037;
 }
-.status-radio-item[data-status="concern"]:has(input:checked) label {
+.status-radio-item[data-status="concern"]:has(input:checked) label.form-check-label {
   background: #fff9c4;
   border-width: 3px;
   font-weight: 700;
 }
 
-.status-radio-item[data-status="offline-maintenance"] label {
+.status-radio-item[data-status="offline-maintenance"] label.form-check-label {
   border-color: #c82333;
   background: #fff5f5;
   color: #7f0000;
 }
-.status-radio-item[data-status="offline-maintenance"]:has(input:checked) label {
+.status-radio-item[data-status="offline-maintenance"]:has(input:checked) label.form-check-label {
   background: #ffcdd2;
   border-width: 3px;
   font-weight: 700;
 }
 
-.status-radio-item[data-status="setup"] label {
+.status-radio-item[data-status="setup"] label.form-check-label {
   border-color: #7b1fa2;
   background: #f9f0ff;
   color: #4a148c;
 }
-.status-radio-item[data-status="setup"]:has(input:checked) label {
+.status-radio-item[data-status="setup"]:has(input:checked) label.form-check-label {
   background: #e1bee7;
   border-width: 3px;
   font-weight: 700;
 }
 
-.status-radio-item[data-status="storage"] label {
+.status-radio-item[data-status="storage"] label.form-check-label {
   border-color: #0056b3;
   background: #f0f4ff;
   color: #002171;
 }
-.status-radio-item[data-status="storage"]:has(input:checked) label {
+.status-radio-item[data-status="storage"]:has(input:checked) label.form-check-label {
   background: #bbdefb;
   border-width: 3px;
   font-weight: 700;
 }
 
-.status-radio-item[data-status="gone"] label {
+.status-radio-item[data-status="gone"] label.form-check-label {
   border-color: #c82333;
   background: #fff5f5;
   color: #7f0000;
 }
-.status-radio-item[data-status="gone"]:has(input:checked) label {
+.status-radio-item[data-status="gone"]:has(input:checked) label.form-check-label {
   background: #ffcdd2;
   border-width: 3px;
   font-weight: 700;
