@@ -77,15 +77,13 @@ final class AssetLogEntryForm extends ContentEntityForm {
       $form['photo']['widget']['#after_build'][] = [static::class, 'addPhotoCaptureAttribute'];
     }
 
-    // Replace the WYSIWYG details widget with a plain textarea.
+    // Lock the details field to plain text — no WYSIWYG editor.
+    // #format and #allowed_formats must be set on the text_format element
+    // itself, not on child elements, because children are created later
+    // by the TextFormat::processTextFormat() #process callback.
     if (isset($form['details']['widget'][0])) {
-      $form['details']['widget'][0]['value']['#type'] = 'textarea';
-      $form['details']['widget'][0]['value']['#rows'] = 6;
-      // Lock to plain_text and hide the format selector.
-      if (isset($form['details']['widget'][0]['format'])) {
-        $form['details']['widget'][0]['format']['format']['#default_value'] = 'plain_text';
-        $form['details']['widget'][0]['format']['#access'] = FALSE;
-      }
+      $form['details']['widget'][0]['#format'] = 'plain_text';
+      $form['details']['widget'][0]['#allowed_formats'] = ['plain_text'];
     }
     if (isset($form['details'])) {
       $form['details']['#weight'] = 5;
