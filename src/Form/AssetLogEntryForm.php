@@ -77,6 +77,35 @@ final class AssetLogEntryForm extends ContentEntityForm {
       $form['photo']['widget']['#after_build'][] = [static::class, 'addPhotoCaptureAttribute'];
     }
 
+    // Confirmed status: replace the dropdown with large tap-friendly radio buttons.
+    if (isset($form['confirmed_status']['widget'])) {
+      $widget = &$form['confirmed_status']['widget'];
+      $widget['#type'] = 'radios';
+      $widget['#attributes']['class'][] = 'asset-confirmed-status-radios';
+
+      // Map term labels to a data-status slug for CSS color coding.
+      // Keyed by label so it works across environments regardless of term IDs.
+      $status_slugs = [
+        'Operational'             => 'operational',
+        'Degraded'                => 'degraded',
+        'Reported Concern'        => 'concern',
+        'Offline for Maintenance' => 'offline-maintenance',
+        'Offline - Initial Setup' => 'setup',
+        'Storage'                 => 'storage',
+        'Gone'                    => 'gone',
+      ];
+      $option_attrs = [];
+      foreach ($widget['#options'] as $tid => $label) {
+        if (isset($status_slugs[$label])) {
+          $option_attrs[$tid] = ['data-status' => $status_slugs[$label]];
+        }
+      }
+      $widget['#option_attributes'] = $option_attrs;
+    }
+
+    // Attach maintenance form styles.
+    $form['#attached']['library'][] = 'asset_status/maintenance_form';
+
     // Lock the details field to plain text — no WYSIWYG editor.
     // #format and #allowed_formats must be set on the text_format element
     // itself, not on child elements, because children are created later

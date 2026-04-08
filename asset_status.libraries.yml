@@ -8,6 +8,11 @@ node_form:
     component:
       css/asset_status_node_form.css: {}
 
+maintenance_form:
+  css:
+    component:
+      css/maintenance_form.css: {}
+
 maintenance_dashboard:
   css:
     component:
