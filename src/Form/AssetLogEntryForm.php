@@ -6,7 +6,7 @@ namespace Drupal\asset_status\Form;
 
 use Drupal\Core\Entity\ContentEntityForm;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Url;
+use Drupal\Core\Render\Element;
 
 /**
  * Handles add/edit forms for asset log entries.
@@ -33,11 +33,19 @@ final class AssetLogEntryForm extends ContentEntityForm {
       ? $this->t('Record Maintenance')
       : $this->t('Edit log entry');
 
-    // Move summary to the bottom as a secondary "title" field.
+    // Hide summary behind an "Advanced" collapsible section.
+    // The title is auto-generated; most staff never need to touch it.
     if (isset($form['summary'])) {
-      $form['summary']['#weight'] = 50;
-      $form['summary']['widget'][0]['value']['#title'] = $this->t('Log title (auto-generated)');
-      $form['summary']['widget'][0]['value']['#description'] = $this->t('Edit this if you want a custom title for this log entry.');
+      $form['summary']['widget'][0]['value']['#title'] = $this->t('Log title');
+      $form['summary']['widget'][0]['value']['#description'] = $this->t('Auto-generated from the tool name and date. Edit only if you need a custom title.');
+      $form['advanced'] = [
+        '#type' => 'details',
+        '#title' => $this->t('Advanced'),
+        '#open' => FALSE,
+        '#weight' => 100,
+      ];
+      $form['advanced']['summary'] = $form['summary'];
+      unset($form['summary']);
     }
 
     // Lock the asset field to read-only display when it is already set.
@@ -64,6 +72,11 @@ final class AssetLogEntryForm extends ContentEntityForm {
       $form['status']['#access'] = FALSE;
     }
 
+    // Add capture attribute to the photo widget so mobile users can take a photo.
+    if (isset($form['photo']['widget'])) {
+      $form['photo']['widget']['#after_build'][] = [static::class, 'addPhotoCaptureAttribute'];
+    }
+
     // Replace the WYSIWYG details widget with a plain textarea.
     if (isset($form['details']['widget'][0])) {
       $form['details']['widget'][0]['value']['#type'] = 'textarea';
@@ -79,6 +92,22 @@ final class AssetLogEntryForm extends ContentEntityForm {
     }
 
     return $form;
+  }
+
+  /**
+   * After-build callback: adds capture/accept attributes to the photo file input.
+   *
+   * The `capture` attribute triggers the native camera on mobile devices.
+   * `accept="image/*"` limits the file picker to images on all devices.
+   */
+  public static function addPhotoCaptureAttribute(array $element, FormStateInterface $form_state): array {
+    foreach (Element::children($element) as $delta) {
+      if (isset($element[$delta]['upload'])) {
+        $element[$delta]['upload']['#attributes']['capture'] = 'environment';
+        $element[$delta]['upload']['#attributes']['accept'] = 'image/*';
+      }
+    }
+    return $element;
   }
 
   /**
