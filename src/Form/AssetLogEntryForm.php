@@ -78,29 +78,13 @@ final class AssetLogEntryForm extends ContentEntityForm {
     }
 
     // Confirmed status: replace the dropdown with large tap-friendly radio buttons.
+    // #after_build runs after processRadios() has created the individual radio
+    // children, so we can reliably add data-status to each item's wrapper div
+    // via #wrapper_attributes (which maps to the outer <div class="form-item">).
     if (isset($form['confirmed_status']['widget'])) {
-      $widget = &$form['confirmed_status']['widget'];
-      $widget['#type'] = 'radios';
-      $widget['#attributes']['class'][] = 'asset-confirmed-status-radios';
-
-      // Map term labels to a data-status slug for CSS color coding.
-      // Keyed by label so it works across environments regardless of term IDs.
-      $status_slugs = [
-        'Operational'             => 'operational',
-        'Degraded'                => 'degraded',
-        'Reported Concern'        => 'concern',
-        'Offline for Maintenance' => 'offline-maintenance',
-        'Offline - Initial Setup' => 'setup',
-        'Storage'                 => 'storage',
-        'Gone'                    => 'gone',
-      ];
-      $option_attrs = [];
-      foreach ($widget['#options'] as $tid => $label) {
-        if (isset($status_slugs[$label])) {
-          $option_attrs[$tid] = ['data-status' => $status_slugs[$label]];
-        }
-      }
-      $widget['#option_attributes'] = $option_attrs;
+      $form['confirmed_status']['widget']['#type'] = 'radios';
+      $form['confirmed_status']['widget']['#attributes']['class'][] = 'asset-confirmed-status-radios';
+      $form['confirmed_status']['widget']['#after_build'][] = [static::class, 'addStatusRadioClasses'];
     }
 
     // Attach maintenance form styles.
@@ -119,6 +103,34 @@ final class AssetLogEntryForm extends ContentEntityForm {
     }
 
     return $form;
+  }
+
+  /**
+   * After-build callback: adds data-status and CSS class to each radio wrapper.
+   *
+   * processRadios() runs as a #process callback before #after_build, so the
+   * individual radio children exist at this point. Setting #wrapper_attributes
+   * on each child puts data-status on the outer <div class="form-item"> that
+   * wraps the <input> + <label> pair, making it reliably targetable by CSS.
+   */
+  public static function addStatusRadioClasses(array $element, FormStateInterface $form_state): array {
+    $status_slugs = [
+      'Operational'             => 'operational',
+      'Degraded'                => 'degraded',
+      'Reported Concern'        => 'concern',
+      'Offline for Maintenance' => 'offline-maintenance',
+      'Offline - Initial Setup' => 'setup',
+      'Storage'                 => 'storage',
+      'Gone'                    => 'gone',
+    ];
+    foreach (Element::children($element) as $key) {
+      $title = $element[$key]['#title'] ?? '';
+      $element[$key]['#wrapper_attributes']['class'][] = 'status-radio-item';
+      if (isset($status_slugs[$title])) {
+        $element[$key]['#wrapper_attributes']['data-status'] = $status_slugs[$title];
+      }
+    }
+    return $element;
   }
 
   /**
