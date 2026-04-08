@@ -68,3 +68,27 @@
   background-color: #5a5a5a;
   color: white;
 }
+
+/* Staff-only "Update Status & Log" button — shown on non-operational tools */
+.asset-staff-action-btn {
+  display: block;
+  margin-top: 8px;
+  padding: 10px 16px;
+  font-size: 1em;
+  font-weight: bold;
+  color: white;
+  background-color: #1a6bbf;
+  text-decoration: none;
+  border-radius: 4px;
+  text-align: center;
+  cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+.asset-staff-action-btn:hover,
+.asset-staff-action-btn:focus {
+  background-color: #145399;
+  color: white;
+  text-decoration: none;
+  border-color: white;
+}

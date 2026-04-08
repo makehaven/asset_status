@@ -8,6 +8,8 @@
  * - status_class: The CSS class for coloring (e.g., status-operational).
  * - message: (Optional) The latest log details message.
  * - history_url: URL to the asset history page.
+ * - staff_action_url: (Optional) URL for staff to update status and log — only
+ *   present for non-operational statuses and users with the right permission.
  */
 #}
 {% if history_url %}
@@ -27,6 +29,12 @@
 </div>
 
 {% if history_url %}
+  </a>
+{% endif %}
+
+{% if staff_action_url %}
+  <a href="{{ staff_action_url }}" class="asset-staff-action-btn">
+    {{ 'Update Status & Log'|t }}
   </a>
 {% endif %}
 

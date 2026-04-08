@@ -22,18 +22,47 @@ function asset_status_form_node_form_alter(array &$form, FormStateInterface $for
     return;
   }
 
-  // Add a dedicated field for status change notes.
-  // We insert this near the status field if possible.
-  $form['asset_status_log_message'] = [
-    '#type' => 'textarea',
-    '#title' => t('Status Change / Log Notes'),
-    '#description' => t('If you are changing the status, please describe the reason (e.g., "Belt snapped," "Routine cleaning"). This will be saved to the asset log and posted to Slack.'),
-    '#rows' => 3,
-    '#weight' => 1, // Attempt to place it near the top (Status is usually 0).
-  ];
+  $account = \Drupal::currentUser();
+  $is_full_admin = $account->hasPermission('administer asset log entries');
 
-  // Add a custom submit handler to capture this value.
-  $form['actions']['submit']['#submit'][] = 'asset_status_node_form_submit';
+  // For existing items: redirect non-admins away from the bare status field.
+  // Full admins keep the field (they may need it for initial setup / bulk edits)
+  // but still get the log message textarea.
+  if (!$node->isNew() && !$is_full_admin) {
+    // Hide the raw status field — changing it here skips the logging workflow.
+    if (isset($form['field_item_status'])) {
+      $form['field_item_status']['#access'] = FALSE;
+    }
+
+    // Show a prominent button linking to the dedicated Quick Status form,
+    // which enforces logging in a single step.
+    $quick_status_url = \Drupal\Core\Url::fromRoute('asset_status.quick_status_update', [
+      'node' => $node->id(),
+    ])->toString();
+
+    $form['asset_status_quick_link'] = [
+      '#type' => 'markup',
+      '#markup' => '<div class="asset-status-node-form-notice">'
+        . '<strong>' . t('Need to change this tool\'s status?') . '</strong> '
+        . t('Use the <a href="@url" class="button button--primary">Update Status &amp; Log</a> form — it records the reason and notifies staff in one step.', ['@url' => $quick_status_url])
+        . '</div>',
+      '#weight' => -5,
+      '#attached' => ['library' => ['asset_status/node_form']],
+    ];
+  }
+  else {
+    // On create (or for full admins on edit): keep the status field and add
+    // the log message textarea beneath it.
+    $form['asset_status_log_message'] = [
+      '#type' => 'textarea',
+      '#title' => t('Status Change / Log Notes'),
+      '#description' => t('Describe the reason for this status (e.g., "Belt snapped," "Routine cleaning"). Saved to the asset log and posted to Slack.'),
+      '#rows' => 3,
+      '#weight' => 1,
+    ];
+
+    $form['actions']['submit']['#submit'][] = 'asset_status_node_form_submit';
+  }
 }
 
 /**
@@ -130,6 +159,7 @@ function asset_status_theme(): array {
         'status_class' => NULL,
         'message' => NULL,
         'history_url' => NULL,
+        'staff_action_url' => NULL,
       ],
     ],
   ];

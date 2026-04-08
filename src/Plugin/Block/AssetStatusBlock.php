@@ -147,6 +147,27 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
       $history_url = Url::fromRoute('entity.node.asset_status.history', ['node' => $node->id()])->toString();
     }
 
+    // Generate a staff "Update Status & Log" URL for non-operational statuses.
+    $staff_action_url = NULL;
+    $non_operational_statuses = ['Degraded', 'Maintenance', 'Out of Service', 'Gone', 'Reported Concern'];
+    if (in_array($status_label, $non_operational_statuses)) {
+      // Prefer the quick status update form (enforces logging); fall back to maintenance log.
+      $quick_status_access = $this->accessManager->checkNamedRoute('asset_status.quick_status_update', [
+        'node' => $node->id(),
+      ], $this->currentUser, TRUE);
+      if ($quick_status_access->isAllowed()) {
+        $staff_action_url = Url::fromRoute('asset_status.quick_status_update', ['node' => $node->id()])->toString();
+      }
+      else {
+        $log_access = $this->accessManager->checkNamedRoute('entity.node.asset_status.maintenance', [
+          'node' => $node->id(),
+        ], $this->currentUser, TRUE);
+        if ($log_access->isAllowed()) {
+          $staff_action_url = Url::fromRoute('entity.node.asset_status.maintenance', ['node' => $node->id()])->toString();
+        }
+      }
+    }
+
     // Build the render array.
     $build = [
       '#theme' => 'asset_status_block',
@@ -154,6 +175,7 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
       '#status_class' => $css_class,
       '#message' => $latest_message,
       '#history_url' => $history_url,
+      '#staff_action_url' => $staff_action_url,
       '#attached' => [
         'library' => [
           'asset_status/asset_status_block',

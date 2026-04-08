@@ -3,6 +3,11 @@ asset_status_block:
     component:
       css/asset_status_block.css: {}
 
+node_form:
+  css:
+    component:
+      css/asset_status_node_form.css: {}
+
 maintenance_dashboard:
   css:
     component:
