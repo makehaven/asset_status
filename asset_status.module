@@ -149,6 +149,27 @@ function asset_status_handle_node_status_change(EntityInterface $entity, bool $i
 }
 
 /**
+ * Implements hook_preprocess_form_element().
+ *
+ * Activates Bootstrap Barrio's built-in 'form-button' checkbox style for the
+ * individual radio buttons inside the confirmed-status widget. This switches
+ * the template from form-check-input/form-check-label (which fight our CSS)
+ * to btn-check/btn btn-outline-primary (Bootstrap's own styled-radio pattern).
+ * The module's maintenance_form.css then overrides the colors per status.
+ */
+function asset_status_preprocess_form_element(array &$variables): void {
+  $element = $variables['element'];
+  if (
+    isset($element['#type']) &&
+    $element['#type'] === 'radio' &&
+    !empty($element['#wrapper_attributes']['class']) &&
+    in_array('status-radio-item', (array) $element['#wrapper_attributes']['class'])
+  ) {
+    $variables['checkbox_style'] = 'form-button';
+  }
+}
+
+/**
  * Implements hook_theme().
  */
 function asset_status_theme(): array {
