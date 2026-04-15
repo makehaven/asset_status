@@ -32,3 +32,35 @@ asset_status.settings:
   description: 'Configure asset history visibility and workflow defaults.'
   parent: system.admin_config_content
   weight: 50
+
+# --- Staff Tools menu entries ---
+asset_status.staff_tab:
+  title: 'Tools & Equipment'
+  description: 'Equipment status, maintenance, and lending library operations.'
+  menu_name: staff-tools
+  url: 'internal:/equipment/status'
+  weight: 20
+
+asset_status.staff_equipment_status:
+  title: 'Equipment Status Board'
+  description: 'Live tool status — green/red indicators and time offline.'
+  route_name: asset_status.tool_status_board
+  menu_name: staff-tools
+  parent: asset_status.staff_tab
+  weight: 5
+
+asset_status.staff_maintenance_queue:
+  title: 'Maintenance Queue'
+  description: 'Member-reported tool issues and equipment status changes.'
+  route_name: asset_status.maintenance_dashboard
+  menu_name: staff-tools
+  parent: asset_status.staff_tab
+  weight: 10
+
+asset_status.staff_lending_manager:
+  title: 'Lending Library Manager'
+  description: 'Manage tool checkouts, returns, and damage charges.'
+  menu_name: staff-tools
+  parent: asset_status.staff_tab
+  url: 'internal:/library/manager'
+  weight: 20

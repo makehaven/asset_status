@@ -21,6 +21,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 final class MaintenanceDashboardController extends ControllerBase {
 
+  use AssetStatusNavTrait;
+
   /**
    * Constructs the controller.
    */
@@ -75,6 +77,8 @@ final class MaintenanceDashboardController extends ControllerBase {
     }
 
     $build = [];
+
+    $build['nav'] = $this->buildAssetStatusNav('queue');
 
     // Stats bar.
     $build['stats'] = [

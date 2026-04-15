@@ -17,6 +17,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 final class AssetLogController extends ControllerBase {
 
+  use AssetStatusNavTrait;
+
   /**
    * The entity form builder.
    *
@@ -154,6 +156,9 @@ final class AssetLogController extends ControllerBase {
    * Displays the asset log history for a node.
    */
   public function history(NodeInterface $node) {
+    $page = [];
+    $page['nav'] = $this->buildAssetStatusNav('');
+
     // Load logs referencing this asset.
     $storage = $this->entityTypeManager->getStorage('asset_log_entry');
     $query = $storage->getQuery()
@@ -174,18 +179,21 @@ final class AssetLogController extends ControllerBase {
         $this->t('Type'),
         $this->t('Summary'),
         $this->t('Status'),
+        $this->t('Details'),
       ],
       '#empty' => $this->t('No history found for this asset.'),
     ];
 
     /** @var \Drupal\asset_status\Entity\AssetLogEntryInterface $log */
     foreach ($logs as $log) {
+      $details = $log->getDetails();
       $build['#rows'][] = [
         ['data' => $this->dateFormatter()->format($log->getCreatedTime(), 'short')],
         ['data' => $log->getOwner() ? $log->getOwner()->getDisplayName() : $this->t('Unknown user')],
         ['data' => $log->bundle()],
         ['data' => $log->label()],
         ['data' => $log->getConfirmedStatus() ? $log->getConfirmedStatus()->label() : '-'],
+        ['data' => $details ? ['#markup' => nl2br(htmlspecialchars($details, ENT_QUOTES, 'UTF-8'))] : '—'],
       ];
     }
 
@@ -193,7 +201,8 @@ final class AssetLogController extends ControllerBase {
       '#type' => 'pager',
     ];
 
-    return $build;
+    $page['table'] = $build;
+    return $page;
   }
 
   /**

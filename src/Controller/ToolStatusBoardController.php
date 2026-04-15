@@ -30,6 +30,8 @@ use Symfony\Component\HttpFoundation\Request;
  */
 final class ToolStatusBoardController extends ControllerBase {
 
+  use AssetStatusNavTrait;
+
   /**
    * Status → severity tier (lower = worse).
    */
@@ -159,6 +161,8 @@ final class ToolStatusBoardController extends ControllerBase {
 
     // Build the render array.
     $build = [];
+
+    $build['nav'] = $this->buildAssetStatusNav('board');
 
     $build['filter'] = $this->buildFilterBar($status_filter, $status_terms, $area_filter, $area_terms, count($rows));
 

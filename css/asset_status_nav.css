@@ -1,0 +1,36 @@
+.asset-status-nav-wrapper {
+  margin: 0 0 1rem;
+  padding: 0.5rem 0.75rem;
+  background: #f3f4f6;
+  border-left: 3px solid #2563eb;
+  border-radius: 3px;
+}
+
+ul.asset-status-nav {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+  font-size: 0.92rem;
+}
+
+ul.asset-status-nav li {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+ul.asset-status-nav li.is-active strong {
+  color: #111;
+}
+
+ul.asset-status-nav a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+ul.asset-status-nav a:hover {
+  text-decoration: underline;
+}
