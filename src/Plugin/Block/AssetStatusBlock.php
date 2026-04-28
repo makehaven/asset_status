@@ -147,9 +147,19 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
       $history_url = Url::fromRoute('entity.node.asset_status.history', ['node' => $node->id()])->toString();
     }
 
+    $non_operational_statuses = ['Degraded', 'Maintenance', 'Out of Service', 'Gone', 'Reported Concern'];
+
+    // Fallback message: when a tool is in a non-operational status but no
+    // log entry exists yet (e.g. status set programmatically, legacy data,
+    // or feedback page rendered before the report was filed), surface a
+    // hint so the viewer isn't left wondering *why* it's degraded. Without
+    // this the block shows just "Status: Degraded" with no context.
+    if (empty($latest_message) && in_array($status_label, $non_operational_statuses, TRUE)) {
+      $latest_message = (string) $this->t('Reason not yet recorded — check history or ask staff.');
+    }
+
     // Generate a staff "Update Status & Log" URL for non-operational statuses.
     $staff_action_url = NULL;
-    $non_operational_statuses = ['Degraded', 'Maintenance', 'Out of Service', 'Gone', 'Reported Concern'];
     if (in_array($status_label, $non_operational_statuses)) {
       // Prefer the quick status update form (enforces logging); fall back to maintenance log.
       $quick_status_access = $this->accessManager->checkNamedRoute('asset_status.quick_status_update', [
