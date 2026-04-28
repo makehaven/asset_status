@@ -26,6 +26,10 @@
   background: green;
 }
 
+.asset-status-block.status-reported-concern {
+  background: #a37a00; /* Dark amber — flagged but not staff-confirmed; less alarming than degraded */
+}
+
 .asset-status-block.status-degraded {
   background: #d68100; /* Darker orange for better white text contrast */
 }
@@ -40,6 +44,10 @@
 
 .asset-status-block.status-setup {
   background: purple;
+}
+
+.asset-status-block.status-unknown {
+  background: #6c757d; /* Defensive fallback for any unmapped status label */
 }
 
 .asset-status-message {
