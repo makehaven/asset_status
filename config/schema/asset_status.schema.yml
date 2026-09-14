@@ -25,3 +25,18 @@ asset_status.settings:
     history_access_mode:
       type: string
       label: 'History access mode'
+    stale_nudge_enabled:
+      type: boolean
+      label: 'Post a Slack nudge for tools stuck in a non-operational status'
+    stale_slack_channel:
+      type: string
+      label: 'Slack channel that always receives stale-status nudges'
+    stale_repeat_days:
+      type: integer
+      label: 'Days between repeat nudges for the same tool'
+    stale_days:
+      type: sequence
+      label: 'Days in status before a tool counts as stale, per status label'
+      sequence:
+        type: integer
+        label: 'Days'

@@ -100,3 +100,16 @@
   text-decoration: none;
   border-color: white;
 }
+/* Since / expected-back line under the status message. */
+.asset-status-dates {
+  margin-top: 0.35rem;
+  font-size: 0.85em;
+  opacity: 0.85;
+}
+.asset-status-dates span + span::before {
+  content: " · ";
+}
+.asset-status-expected--overdue {
+  font-weight: 600;
+  color: #a12222;
+}

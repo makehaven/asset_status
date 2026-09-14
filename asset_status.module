@@ -176,6 +176,9 @@ function asset_status_theme(): array {
   return [
     'asset_status_block' => [
       'variables' => [
+        'since' => NULL,
+        'expected_back' => NULL,
+        'overdue' => FALSE,
         'status_label' => NULL,
         'status_class' => NULL,
         'message' => NULL,
@@ -184,4 +187,14 @@ function asset_status_theme(): array {
       ],
     ],
   ];
+}
+
+/**
+ * Implements hook_cron().
+ *
+ * Once a day, nudge staff about tools stuck in a non-operational status. The
+ * monitor gates itself to one run per ~20 hours, so hourly cron is fine.
+ */
+function asset_status_cron(): void {
+  \Drupal::service('asset_status.stale_monitor')->runFromCron();
 }

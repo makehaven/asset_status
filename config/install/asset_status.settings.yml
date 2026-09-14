@@ -1,1 +1,10 @@
 history_access_mode: authenticated
+stale_nudge_enabled: true
+stale_slack_channel: '#broken'
+stale_repeat_days: 7
+stale_days:
+  'Reported Concern': 14
+  'Degraded': 30
+  'Offline for Maintenance': 7
+  'Out of Service': 30
+  'Maintenance': 7

@@ -10,3 +10,14 @@ services:
     class: Drupal\asset_status\Service\AssetAvailability
     arguments:
       - '@entity_type.manager'
+
+  asset_status.stale_monitor:
+    class: Drupal\asset_status\Service\StaleStatusMonitor
+    arguments:
+      - '@database'
+      - '@entity_type.manager'
+      - '@config.factory'
+      - '@state'
+      - '@datetime.time'
+      - '@http_client'
+      - '@logger.factory'

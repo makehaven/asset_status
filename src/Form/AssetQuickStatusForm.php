@@ -137,8 +137,16 @@ final class AssetQuickStatusForm extends FormBase {
     $form['staff_note'] = [
       '#type' => 'textarea',
       '#title' => $this->t('Staff note'),
-      '#description' => $this->t('Describe what you found and/or what action was taken. Appears in the maintenance history.'),
+      '#description' => $this->t('Describe what you found and/or what action was taken. Appears in the maintenance history and on the tool page. Required when the tool is not Operational — a bare status with no reason reads as abandoned.'),
       '#rows' => 3,
+    ];
+    $form['expected_back'] = [
+      '#type' => 'date',
+      '#title' => $this->t('Expected back'),
+      '#description' => $this->t('Optional. When you expect the tool to be usable again. Shown on the tool page; the stale-status reminder calls it overdue once the date passes.'),
+      '#states' => [
+        'invisible' => [':input[name="new_status"]' => ['value' => $this->operationalTid()]],
+      ],
     ];
 
     $form['actions'] = ['#type' => 'actions'];
@@ -160,11 +168,42 @@ final class AssetQuickStatusForm extends FormBase {
   /**
    * {@inheritdoc}
    */
+  public function validateForm(array &$form, FormStateInterface $form_state): void {
+    parent::validateForm($form, $form_state);
+    $new_term = $this->entityTypeManager->getStorage('taxonomy_term')->load((int) $form_state->getValue('new_status'));
+    $note = trim((string) $form_state->getValue('staff_note'));
+    if ($new_term && $new_term->label() !== 'Operational' && $note === '') {
+      $form_state->setErrorByName('staff_note', $this->t(
+        'Say why the tool is @status. Members see this on the tool page, and it is what tells the next person whether the status is still true.',
+        ['@status' => $new_term->label()]
+      ));
+    }
+    $expected = (string) $form_state->getValue('expected_back');
+    if ($expected !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $expected)) {
+      $form_state->setErrorByName('expected_back', $this->t('Enter the expected-back date as YYYY-MM-DD.'));
+    }
+  }
+
+  /**
+   * The Operational term id, for the #states rule; 0 when the term is missing.
+   */
+  protected function operationalTid(): int {
+    $terms = $this->entityTypeManager->getStorage('taxonomy_term')->loadByProperties([
+      'vid' => 'item_status',
+      'name' => 'Operational',
+    ]);
+    return $terms ? (int) reset($terms)->id() : 0;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function submitForm(array &$form, FormStateInterface $form_state): void {
     /** @var \Drupal\node\NodeInterface $node */
     $node           = $form_state->get('node');
     $new_status_tid = (int) $form_state->getValue('new_status');
     $staff_note     = trim((string) $form_state->getValue('staff_note'));
+    $expected_back  = trim((string) $form_state->getValue('expected_back'));
 
     $new_term = $this->entityTypeManager->getStorage('taxonomy_term')->load($new_status_tid);
     if (!$new_term) {
@@ -188,6 +227,7 @@ final class AssetQuickStatusForm extends FormBase {
       'confirmed_status' => $new_status_tid,
       'reported_status'  => $new_status_tid,
       'user_id'          => $current_user->id(),
+      'expected_back'    => ($expected_back !== '' && $new_term->label() !== 'Operational') ? $expected_back : NULL,
     ])->save();
 
     $this->messenger()->addStatus($this->t('@tool status updated to @status.', [

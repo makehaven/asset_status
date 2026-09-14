@@ -100,6 +100,10 @@ final class AssetLogEntryForm extends ContentEntityForm {
     }
     if (isset($form['details'])) {
       $form['details']['#weight'] = 5;
+      $form['details']['widget'][0]['#description'] = $this->t('What you found and what was done. Required when the status is anything but Operational; shown on the tool page.');
+    }
+    if (isset($form['expected_back'])) {
+      $form['expected_back']['#weight'] = 7;
     }
 
     return $form;
@@ -147,6 +151,26 @@ final class AssetLogEntryForm extends ContentEntityForm {
       }
     }
     return $element;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function validateForm(array &$form, FormStateInterface $form_state): void {
+    parent::validateForm($form, $form_state);
+    // A non-operational status with no note is what makes a tool look
+    // abandoned (the table saw, 2026-09-12: "Maintenance – Table Saw – Sep 12"
+    // and nothing else). Require the reason whenever the entry parks the tool.
+    $status_value = $form_state->getValue('confirmed_status');
+    $tid = is_array($status_value) ? (int) ($status_value[0]['target_id'] ?? $status_value['target_id'] ?? 0) : (int) $status_value;
+    if ($tid) {
+      $term = $this->entityTypeManager->getStorage('taxonomy_term')->load($tid);
+      $details = $form_state->getValue('details');
+      $text = is_array($details) ? trim((string) ($details[0]['value'] ?? '')) : trim((string) $details);
+      if ($term && $term->label() !== 'Operational' && $text === '') {
+        $form_state->setErrorByName('details', $this->t('Say why the tool is @status — members see this on the tool page, and it is what tells the next person whether the status is still true.', ['@status' => $term->label()]));
+      }
+    }
   }
 
   /**

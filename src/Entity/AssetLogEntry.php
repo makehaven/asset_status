@@ -241,6 +241,19 @@ final class AssetLogEntry extends ContentEntityBase implements AssetLogEntryInte
       ->setDisplayConfigurable('form', TRUE)
       ->setDisplayConfigurable('view', TRUE);
 
+    $fields['expected_back'] = BaseFieldDefinition::create('datetime')
+      ->setLabel(t('Expected back'))
+      ->setDescription(t('When you expect the tool to be usable again. Shown to members on the tool page; a past date reads as overdue.'))
+      ->setSetting('datetime_type', 'date')
+      ->setRevisionable(TRUE)
+      ->setRequired(FALSE)
+      ->setDisplayOptions('form', [
+        'type' => 'datetime_default',
+        'weight' => 7,
+      ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE);
+
     $fields['status'] = BaseFieldDefinition::create('boolean')
       ->setLabel(t('Published'))
       ->setDefaultValue(TRUE)
@@ -456,6 +469,24 @@ final class AssetLogEntry extends ContentEntityBase implements AssetLogEntryInte
    */
   public function setDetails(?string $details): self {
     $this->set('details', $details);
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getExpectedBack(): ?string {
+    if (!$this->hasField('expected_back') || $this->get('expected_back')->isEmpty()) {
+      return NULL;
+    }
+    return (string) $this->get('expected_back')->value;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setExpectedBack(?string $date): self {
+    $this->set('expected_back', $date);
     return $this;
   }
 

@@ -98,3 +98,46 @@ function asset_status_update_10002(): void {
     ])->save();
   }
 }
+
+/**
+ * Adds the expected_back date field to asset log entries.
+ *
+ * A non-operational status with no horizon reads as abandoned; this lets a
+ * maintenance or status-change entry say when the tool should be usable
+ * again, and the stale-status nudge can call it overdue.
+ */
+function asset_status_update_10004(): void {
+  $definition_update_manager = \Drupal::entityDefinitionUpdateManager();
+  $field_definitions = \Drupal::service('entity_field.manager')
+    ->getBaseFieldDefinitions('asset_log_entry');
+  if (isset($field_definitions['expected_back']) && !$definition_update_manager->getFieldStorageDefinition('expected_back', 'asset_log_entry')) {
+    $definition_update_manager->installFieldStorageDefinition(
+      'expected_back',
+      'asset_log_entry',
+      'asset_status',
+      $field_definitions['expected_back']
+    );
+  }
+}
+
+/**
+ * Seeds the stale-status reminder settings on sites installed before them.
+ *
+ * config/install only applies on first install, so without this the
+ * thresholds would be empty and nothing would ever be monitored.
+ */
+function asset_status_update_10005(): void {
+  $config = \Drupal::configFactory()->getEditable('asset_status.settings');
+  $defaults = [
+    'stale_nudge_enabled' => TRUE,
+    'stale_slack_channel' => '#broken',
+    'stale_repeat_days' => 7,
+    'stale_days' => \Drupal\asset_status\Service\StaleStatusMonitor::DEFAULT_STALE_DAYS,
+  ];
+  foreach ($defaults as $key => $value) {
+    if ($config->get($key) === NULL) {
+      $config->set($key, $value);
+    }
+  }
+  $config->save(TRUE);
+}

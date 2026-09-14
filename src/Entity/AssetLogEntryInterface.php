@@ -62,6 +62,16 @@ interface AssetLogEntryInterface extends ContentEntityInterface, EntityOwnerInte
   /**
    * Gets the creation timestamp.
    */
+  /**
+   * The date (Y-m-d) the tool is expected to be usable again, if recorded.
+   */
+  public function getExpectedBack(): ?string;
+
+  /**
+   * Sets the expected-back date (Y-m-d) or NULL.
+   */
+  public function setExpectedBack(?string $date): self;
+
   public function getCreatedTime(): int;
 
   /**

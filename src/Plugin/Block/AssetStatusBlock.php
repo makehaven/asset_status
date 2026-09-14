@@ -111,6 +111,9 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
       ->execute();
 
     $latest_message = '';
+    $since = NULL;
+    $expected_back = NULL;
+    $overdue = FALSE;
     if (!empty($logs)) {
       $log_id = reset($logs);
       /** @var \Drupal\asset_status\Entity\AssetLogEntryInterface $log_entry */
@@ -118,6 +121,9 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
       if ($log_entry) {
         // We prefer the 'details' field if populated, otherwise fallback to summary.
         $latest_message = $log_entry->getDetails() ?: $log_entry->getSummary();
+        $since = $log_entry->getCreatedTime();
+        $expected_back = $log_entry->getExpectedBack();
+        $overdue = $expected_back !== NULL && strtotime($expected_back . ' 23:59:59') < \Drupal::time()->getRequestTime();
       }
     }
 
@@ -147,7 +153,26 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
       $history_url = Url::fromRoute('entity.node.asset_status.history', ['node' => $node->id()])->toString();
     }
 
-    $non_operational_statuses = ['Degraded', 'Maintenance', 'Out of Service', 'Gone', 'Reported Concern'];
+    $non_operational_statuses = [
+      'Degraded',
+      'Maintenance',
+      'Offline for Maintenance',
+      'Out of Service',
+      'Gone',
+      'Reported Concern',
+    ];
+    $is_non_operational = in_array($status_label, $non_operational_statuses, TRUE);
+
+    // "Since" and "expected back" are what turn a bare status into something a
+    // member can act on: they answer "how long has this been true?" and "when
+    // will it be usable again?". Only shown for non-operational statuses.
+    $date_formatter = \Drupal::service('date.formatter');
+    $since_text = ($is_non_operational && $since)
+      ? (string) $date_formatter->format($since, 'custom', 'M j')
+      : NULL;
+    $expected_text = ($is_non_operational && $expected_back)
+      ? (string) $date_formatter->format(strtotime($expected_back), 'custom', 'M j')
+      : NULL;
 
     // Fallback message: when a tool is in a non-operational status but no
     // log entry exists yet (e.g. status set programmatically, legacy data,
@@ -184,6 +209,9 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
       '#status_label' => $status_label,
       '#status_class' => $css_class,
       '#message' => $latest_message,
+      '#since' => $since_text,
+      '#expected_back' => $expected_text,
+      '#overdue' => $overdue,
       '#history_url' => $history_url,
       '#staff_action_url' => $staff_action_url,
       '#attached' => [

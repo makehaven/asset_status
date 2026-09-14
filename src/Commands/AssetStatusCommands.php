@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\asset_status\Commands;
 
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\asset_status\Service\StaleStatusMonitor;
 use Drush\Commands\DrushCommands;
 
 /**
@@ -20,9 +21,51 @@ final class AssetStatusCommands extends DrushCommands {
   /**
    * Constructs the commands service.
    */
-  public function __construct(EntityTypeManagerInterface $entity_type_manager) {
+  public function __construct(
+    EntityTypeManagerInterface $entity_type_manager,
+    private StaleStatusMonitor $staleMonitor,
+  ) {
     parent::__construct();
     $this->entityTypeManager = $entity_type_manager;
+  }
+
+  /**
+   * Lists tools stuck in a non-operational status; optionally nudges Slack.
+   *
+   * Without --send this is read-only: the table plus the exact messages the
+   * next cron run would post. --send posts them now (live only; other
+   * environments log instead) and records the nudge, ignoring the daily gate.
+   *
+   * @command asset-status:stale
+   * @option send Post the nudges now instead of only listing them.
+   * @usage drush asset-status:stale
+   * @usage drush asset-status:stale --send
+   */
+  public function stale(array $options = ['send' => FALSE]): void {
+    $stale = $this->staleMonitor->findStale();
+    if (!$stale) {
+      $this->output()->writeln('No tools are past their stale threshold.');
+      return;
+    }
+    $rows = [];
+    foreach ($stale as $item) {
+      $rows[] = [
+        $item['nid'],
+        $item['title'],
+        $item['status'],
+        $item['days'] . 'd (>' . $item['threshold'] . ')',
+        $item['expected_back'] ? ($item['expected_back'] . ($item['overdue'] ? ' OVERDUE' : '')) : '-',
+        $item['last_nudged'] ? date('Y-m-d', $item['last_nudged']) : 'never',
+        $item['due'] ? 'yes' : 'no',
+      ];
+    }
+    $this->io()->table(['nid', 'Tool', 'Status', 'In status', 'Expected back', 'Last nudged', 'Due'], $rows);
+
+    $messages = $this->staleMonitor->nudge(!$options['send']);
+    $this->output()->writeln(($options['send'] ? 'Posted ' : 'Would post ') . count($messages) . ' nudge(s):');
+    foreach ($messages as $nid => $message) {
+      $this->output()->writeln('  [' . $nid . '] ' . implode(' ', $this->staleMonitor->channelsFor((int) $nid)) . ' — ' . strtok($message, "\n"));
+    }
   }
 
   /**

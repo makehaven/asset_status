@@ -54,6 +54,39 @@ final class AssetStatusSettingsForm extends ConfigFormBase {
       '#default_value' => $config->get('history_access_mode') ?: 'authenticated',
     ];
 
+    $form['stale'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Stale status reminders'),
+      '#open' => TRUE,
+      '#description' => $this->t('A tool that stays non-operational with no new log entry for longer than its threshold gets a Slack reminder ("still true?") with the quick-update link, repeated until someone updates it. Any new log entry resets the clock. Preview what would be sent with <code>drush asset-status:stale</code>.'),
+    ];
+    $form['stale']['stale_nudge_enabled'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Send stale-status reminders to Slack (once a day from cron)'),
+      '#default_value' => (bool) ($config->get('stale_nudge_enabled') ?? TRUE),
+    ];
+    $form['stale']['stale_slack_channel'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Channel that receives every reminder'),
+      '#description' => $this->t("Reminders also go to the tool's own channel (or its area channel) when one is set. Leave empty to post only there."),
+      '#default_value' => $config->get('stale_slack_channel'),
+      '#maxlength' => 80,
+    ];
+    $form['stale']['stale_repeat_days'] = [
+      '#type' => 'number',
+      '#title' => $this->t('Days between repeat reminders for the same tool'),
+      '#min' => 1,
+      '#default_value' => $config->get('stale_repeat_days') ?: 7,
+    ];
+    $thresholds = (array) ($config->get('stale_days') ?? []);
+    $form['stale']['stale_days'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Days in status before a tool counts as stale'),
+      '#description' => $this->t('One per line, <code>Status label: days</code>. Statuses not listed are never reminded. Operational, Storage, Gone and Setup are never reminded regardless.'),
+      '#rows' => 6,
+      '#default_value' => implode("\n", array_map(static fn($k, $v) => $k . ': ' . $v, array_keys($thresholds), $thresholds)),
+    ];
+
     return parent::buildForm($form, $form_state);
   }
 
@@ -63,9 +96,27 @@ final class AssetStatusSettingsForm extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state): void {
     $this->configFactory->getEditable('asset_status.settings')
       ->set('history_access_mode', $form_state->getValue('history_access_mode'))
+      ->set('stale_nudge_enabled', (bool) $form_state->getValue('stale_nudge_enabled'))
+      ->set('stale_slack_channel', trim((string) $form_state->getValue('stale_slack_channel')))
+      ->set('stale_repeat_days', max(1, (int) $form_state->getValue('stale_repeat_days')))
+      ->set('stale_days', $this->parseThresholds((string) $form_state->getValue('stale_days')))
       ->save();
 
     parent::submitForm($form, $form_state);
+  }
+
+  /**
+   * Turns "Status label: days" lines into a label => days map.
+   */
+  protected function parseThresholds(string $text): array {
+    $map = [];
+    foreach (preg_split('/\r?\n/', $text) as $line) {
+      if (!preg_match('/^\s*(.+?)\s*:\s*(\d+)\s*$/', $line, $m)) {
+        continue;
+      }
+      $map[$m[1]] = (int) $m[2];
+    }
+    return $map;
   }
 
 }
