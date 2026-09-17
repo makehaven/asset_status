@@ -37,6 +37,10 @@ class StaleStatusMonitorTest extends KernelTestBase {
     'workflows',
     'file',
     'image',
+    // Real module rather than a bare config write: post() reads its
+    // webhook_url, and this test's whole point is what happens when that is
+    // empty, so the schema needs to be genuinely present.
+    'slack_connector',
   ];
 
   /**
@@ -177,6 +181,53 @@ class StaleStatusMonitorTest extends KernelTestBase {
     $this->assertCount(1, $monitor->findStale());
     $this->assertCount(1, $monitor->nudge(TRUE));
     $this->assertCount(0, $monitor->nudge());
+  }
+
+
+  /**
+   * A nudge that was not delivered must not be recorded as sent.
+   *
+   * This is the defect that made the 2026-09-14 release's own acceptance
+   * silently pass. That deploy's `cim --partial` blanked the Slack Connector
+   * webhook, so every post was skipped — but the tools were stamped "nudged"
+   * anyway and the run logged a nudge count. The two tools the release was
+   * written for would not have been retried for a week, and nothing said so.
+   *
+   * Simulated by pretending to be live with no webhook configured, which is
+   * exactly the state live was in from 2026-09-15 to 09-17.
+   */
+  public function testUndeliveredNudgeIsNotRecordedAsSent(): void {
+    $node = $this->tool('Laser', 'Reported Concern', 30);
+    /** @var \Drupal\asset_status\Service\StaleStatusMonitor $monitor */
+    $monitor = \Drupal::service('asset_status.stale_monitor');
+
+    $original = $_ENV['PANTHEON_ENVIRONMENT'] ?? NULL;
+    $_ENV['PANTHEON_ENVIRONMENT'] = 'live';
+    $this->installConfig(['slack_connector']);
+    $this->config('slack_connector.settings')->set('webhook_url', '')->save();
+
+    try {
+      $sent = $monitor->nudge();
+
+      $this->assertCount(0, $sent, 'An undelivered nudge must not be counted as sent.');
+      $this->assertNull(
+        \Drupal::state()->get(StaleStatusMonitor::STATE_NUDGE_PREFIX . $node->id()),
+        'An undelivered nudge must not stamp the tool as nudged.'
+      );
+
+      // And because nothing was recorded, it is still due on the next run
+      // rather than suppressed for the repeat window.
+      $stale = $monitor->findStale();
+      $this->assertTrue($stale[(int) $node->id()]['due'], 'The tool must still be due.');
+    }
+    finally {
+      if ($original === NULL) {
+        unset($_ENV['PANTHEON_ENVIRONMENT']);
+      }
+      else {
+        $_ENV['PANTHEON_ENVIRONMENT'] = $original;
+      }
+    }
   }
 
 }

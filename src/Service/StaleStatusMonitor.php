@@ -175,10 +175,22 @@ class StaleStatusMonitor {
       if ($dry_run) {
         continue;
       }
+      // Only record the nudge if something actually went out. Marking it sent
+      // regardless is how the 2026-09-14 release's own acceptance silently
+      // failed: the Slack webhook had been blanked by that deploy's
+      // `cim --partial`, every post was skipped, and the tools were still
+      // stamped "nudged" — so they would not have been retried for a week and
+      // the log said the run had nudged them.
+      $delivered = FALSE;
       foreach ($this->channelsFor($nid) as $channel) {
-        $this->post($channel, $message);
+        $delivered = $this->post($channel, $message) || $delivered;
       }
-      $this->state->set(self::STATE_NUDGE_PREFIX . $nid, $this->time->getRequestTime());
+      if ($delivered) {
+        $this->state->set(self::STATE_NUDGE_PREFIX . $nid, $this->time->getRequestTime());
+      }
+      else {
+        unset($sent[$nid]);
+      }
     }
 
     if (!$dry_run) {
@@ -263,7 +275,7 @@ class StaleStatusMonitor {
    * Only live posts to Slack, matching slack_asset_status_change: dev, test
    * and Lando log the message instead, so rehearsals never page anyone.
    */
-  protected function post(string $channel, string $message): void {
+  protected function post(string $channel, string $message): bool {
     $logger = $this->loggerFactory->get('asset_status');
     $env = $_ENV['PANTHEON_ENVIRONMENT'] ?? getenv('PANTHEON_ENVIRONMENT') ?: NULL;
     if ($env !== 'live') {
@@ -272,21 +284,25 @@ class StaleStatusMonitor {
         '@channel' => $channel,
         '@message' => $message,
       ]);
-      return;
+      // Off-live is a deliberate no-op, not a failure: treat it as delivered so
+      // dev and test do not accumulate a permanent backlog of "due" nudges.
+      return TRUE;
     }
     $webhook = (string) $this->configFactory->get('slack_connector.settings')->get('webhook_url');
     if ($webhook === '') {
       $logger->error('Stale nudge skipped: Slack Connector webhook is not configured.');
-      return;
+      return FALSE;
     }
     try {
       $this->httpClient->post($webhook, [
         'headers' => ['Content-Type' => 'application/json'],
         'json' => ['channel' => $channel, 'text' => $message],
       ]);
+      return TRUE;
     }
     catch (\Throwable $e) {
       $logger->error('Stale nudge to @channel failed: @error', ['@channel' => $channel, '@error' => $e->getMessage()]);
+      return FALSE;
     }
   }
 
