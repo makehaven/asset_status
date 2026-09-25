@@ -171,3 +171,9 @@
 .tool-status-board-table tr.row-multi-unit td:nth-child(2) {
   font-weight: 600;
 }
+.tool-status-board-table .unit-serial {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8em;
+  color: #777;
+  margin-left: 0.4rem;
+}

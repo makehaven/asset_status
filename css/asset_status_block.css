@@ -171,3 +171,12 @@
 .asset-unit__actions a + a {
   margin-left: 8px;
 }
+
+.asset-unit__serial {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8em;
+  color: #666;
+}
+.asset-unit-parent-note .asset-unit__serial {
+  margin-left: 8px;
+}

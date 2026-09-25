@@ -15,6 +15,7 @@
  *   present for non-operational statuses and users with the right permission.
  * - parent: (Optional) {title, url} of the tool this machine belongs to, on a
  *   unit page.
+ * - serial: (Optional) this machine's serial number, on a unit page.
  * - units: (Optional) one entry per machine of a multi-unit tool:
  *   {title, url, status, status_class, usable, since, expected_back, overdue,
  *   update_url, report_url}. When set, status_label is the roll-up
@@ -24,6 +25,7 @@
 {% if parent %}
   <div class="asset-unit-parent-note">
     {{ 'Part of'|t }} <a href="{{ parent.url }}">{{ parent.title }}</a>
+    {% if serial %}<span class="asset-unit__serial">{{ 'S/N @serial'|t({'@serial': serial}) }}</span>{% endif %}
   </div>
 {% endif %}
 
@@ -62,6 +64,7 @@
     {% for unit in units %}
       <li class="asset-unit {{ unit.status_class }}{{ unit.usable ? ' asset-unit--usable' : ' asset-unit--down' }}">
         <a class="asset-unit__title" href="{{ unit.url }}">{{ unit.title }}</a>
+        {% if unit.serial %}<span class="asset-unit__serial">{{ 'S/N @serial'|t({'@serial': unit.serial}) }}</span>{% endif %}
         <span class="asset-unit__status">{{ unit.status }}</span>
         {% if unit.since or unit.expected_back %}
           <span class="asset-unit__dates">

@@ -87,6 +87,16 @@ class UnitManagerTest extends KernelTestBase {
       ])->save();
     }
     FieldStorageConfig::create([
+      'field_name' => 'field_item_serial_number',
+      'entity_type' => 'node',
+      'type' => 'string',
+    ])->save();
+    FieldConfig::create([
+      'field_name' => 'field_item_serial_number',
+      'entity_type' => 'node',
+      'bundle' => 'item',
+    ])->save();
+    FieldStorageConfig::create([
       'field_name' => 'field_item_set',
       'entity_type' => 'node',
       'type' => 'entity_reference',
@@ -173,12 +183,15 @@ class UnitManagerTest extends KernelTestBase {
     $this->assertSame(2, $s['total']);
     $this->assertSame(2, $s['available']);
 
-    [$parent] = $this->laser('Operational', 'Offline for Maintenance');
+    [$parent, , $laser2] = $this->laser('Operational', 'Offline for Maintenance');
+    $laser2->set('field_item_serial_number', ' V460-0042 ')->save();
     $s = $units->summary($parent);
     $this->assertSame(2, $s['total']);
     $this->assertSame(1, $s['available']);
     $down = array_values(array_filter($s['units'], fn($u) => !$u['usable']));
     $this->assertSame('Laser 2', $down[0]['title']);
+    $this->assertSame('V460-0042', $down[0]['serial'], 'serial is trimmed and carried in the roll-up');
+    $this->assertSame([(int) $laser2->id() => 'V460-0042'], $units->serialMap(array_keys($s['units'])));
     $this->assertSame('Offline for Maintenance', $down[0]['status']);
     $this->assertNotNull($down[0]['since'], 'creation logged a status_change entry the roll-up reads "since" from');
 

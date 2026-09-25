@@ -256,6 +256,7 @@ final class ToolStatusBoardController extends ControllerBase {
         ->fetchAllKeyed();
     }
 
+    $serials = $this->units->serialMap(array_keys($parent_map));
     $top = [];
     foreach ($rows as $row) {
       $nid = (int) $row->nid;
@@ -263,6 +264,7 @@ final class ToolStatusBoardController extends ControllerBase {
         continue;
       }
       $row->is_unit = TRUE;
+      $row->serial = $serials[$nid] ?? '';
       $parent_nid = $parent_map[$nid];
       if (isset($by_nid[$parent_nid])) {
         $by_nid[$parent_nid]->units[] = $row;
@@ -493,7 +495,8 @@ final class ToolStatusBoardController extends ControllerBase {
       }
       if (!empty($row->is_unit)) {
         $classes[] = 'row-unit';
-        $tool_link = Markup::create('<span class="unit-indent" aria-hidden="true">↳</span> ' . $tool_link->toString());
+        $serial = !empty($row->serial) ? ' <span class="unit-serial">' . htmlspecialchars((string) $this->t('S/N @serial', ['@serial' => $row->serial])) . '</span>' : '';
+        $tool_link = Markup::create('<span class="unit-indent" aria-hidden="true">↳</span> ' . $tool_link->toString() . $serial);
       }
 
       $table_rows[] = [

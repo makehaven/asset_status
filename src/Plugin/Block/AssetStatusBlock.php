@@ -234,6 +234,7 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
       '#history_url' => $history_url,
       '#staff_action_url' => $staff_action_url,
       '#parent' => $this->parentVariable($node),
+      '#serial' => $this->units->isUnit($node) ? $this->units->serial($node) : NULL,
       '#attached' => [
         'library' => [
           'asset_status/asset_status_block',
@@ -301,6 +302,7 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
       $expected = $unit['expected_back'] ? strtotime($unit['expected_back']) : NULL;
       $items[] = [
         'title' => $unit['title'],
+        'serial' => $unit['serial'],
         'url' => $unit_node->toUrl()->toString(),
         'status' => $unit['status'],
         'status_class' => $class_map[$unit['status']] ?? 'status-unknown',

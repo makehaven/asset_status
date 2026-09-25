@@ -297,6 +297,7 @@ function asset_status_theme(): array {
         'history_url' => NULL,
         'staff_action_url' => NULL,
         'parent' => NULL,
+        'serial' => NULL,
         'units' => NULL,
       ],
     ],

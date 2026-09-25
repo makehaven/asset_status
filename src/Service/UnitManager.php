@@ -163,6 +163,47 @@ final class UnitManager {
   }
 
   /**
+   * The machine's serial number, '' when not recorded.
+   *
+   * Serial numbers are what tell two identical machines apart on the floor,
+   * so every place that names a unit shows it when it is known.
+   */
+  public function serial(NodeInterface $node): string {
+    if (!$node->hasField('field_item_serial_number') || $node->get('field_item_serial_number')->isEmpty()) {
+      return '';
+    }
+    return trim((string) $node->get('field_item_serial_number')->value);
+  }
+
+  /**
+   * Serial numbers for a batch of nids, in one query.
+   *
+   * @param int[] $nids
+   *   Node ids.
+   *
+   * @return array<int, string>
+   *   nid => serial, only for nodes that have one.
+   */
+  public function serialMap(array $nids): array {
+    if (!$nids || !$this->database->schema()->tableExists('node__field_item_serial_number')) {
+      return [];
+    }
+    $rows = $this->database->select('node__field_item_serial_number', 'sn')
+      ->fields('sn', ['entity_id', 'field_item_serial_number_value'])
+      ->condition('sn.entity_id', array_map('intval', $nids), 'IN')
+      ->condition('sn.deleted', 0)
+      ->execute();
+    $map = [];
+    foreach ($rows as $row) {
+      $serial = trim((string) $row->field_item_serial_number_value);
+      if ($serial !== '') {
+        $map[(int) $row->entity_id] = $serial;
+      }
+    }
+    return $map;
+  }
+
+  /**
    * TRUE when the unit has been retired (Gone).
    */
   public function isRetired(NodeInterface $node): bool {
@@ -183,7 +224,7 @@ final class UnitManager {
   /**
    * Roll-up of a tool's units for the tool page and the status board.
    *
-   * @return array{total:int, available:int, units:array<int,array{nid:int,title:string,status:string,usable:bool,since:?int,expected_back:?string}>}
+   * @return array{total:int, available:int, units:array<int,array{nid:int,title:string,serial:string,status:string,usable:bool,since:?int,expected_back:?string}>}
    *   Retired units are left out. `since` is the last status_change log time.
    */
   public function summary(NodeInterface $parent): array {
@@ -201,6 +242,7 @@ final class UnitManager {
       $summary['units'][$nid] = [
         'nid' => $nid,
         'title' => $unit->label(),
+        'serial' => $this->serial($unit),
         'status' => $this->statusLabel($unit),
         'usable' => $usable,
         'since' => $latest[$nid]['created'] ?? NULL,
