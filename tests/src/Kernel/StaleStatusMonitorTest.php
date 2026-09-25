@@ -171,6 +171,38 @@ class StaleStatusMonitorTest extends KernelTestBase {
   }
 
   /**
+   * Reminders stay in the staff channel, never the tool's member channel.
+   *
+   * Lior, 2026-09-24: the "still true?" reminder was landing in #laser-cutting,
+   * asking members to confirm a record only staff can update.
+   */
+  public function testRemindersStayOutOfTheToolChannel(): void {
+    FieldStorageConfig::create([
+      'field_name' => 'field_item_slack_channel',
+      'entity_type' => 'node',
+      'type' => 'string',
+    ])->save();
+    FieldConfig::create([
+      'field_name' => 'field_item_slack_channel',
+      'entity_type' => 'node',
+      'bundle' => 'item',
+      'label' => 'Slack channel',
+    ])->save();
+    $node = $this->tool('Laser', 'Reported Concern', 30);
+    $node->_skip_asset_status_log = TRUE;
+    $node->set('field_item_slack_channel', 'laser-cutting')->save();
+
+    /** @var \Drupal\asset_status\Service\StaleStatusMonitor $monitor */
+    $monitor = \Drupal::service('asset_status.stale_monitor');
+    $this->assertSame(['#broken'], $monitor->channelsFor((int) $node->id()));
+
+    // With no staff channel configured, the tool channel is the fallback so
+    // the reminder still reaches somebody.
+    $this->config('asset_status.settings')->set('stale_slack_channel', '')->save();
+    $this->assertSame(['#laser-cutting'], $monitor->channelsFor((int) $node->id()));
+  }
+
+  /**
    * Disabled setting: cron path posts nothing, but the preview still lists.
    */
   public function testDisabledStillPreviews(): void {

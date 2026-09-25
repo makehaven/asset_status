@@ -230,43 +230,41 @@ class StaleStatusMonitor {
   }
 
   /**
-   * Channels a nudge for this tool goes to: the tool's own, then the shared one.
+   * Channels a nudge for this tool goes to.
    *
-   * Mirrors slack_asset_status_change's routing (item channel, else the
-   * area-interest channel) so the reminder lands where the original status
-   * post did, plus the configured maintenance channel so the shop manager
-   * sees every one in a single place.
+   * Only the configured maintenance channel. The tool's own channel (or its
+   * area channel) is a member channel: asking "still true?" there puts a staff
+   * chore in front of members, who cannot update the record and should not be
+   * asked to (Lior, 2026-09-24, about #laser-cutting). The original status post
+   * still goes to the tool channel from slack_asset_status_change; only this
+   * repeating reminder stays with staff. The tool's channel is used only when
+   * no maintenance channel is configured, so a reminder always reaches
+   * somebody.
    *
    * @return string[]
-   *   Channel names with a leading '#', shared channel first.
+   *   Channel names with a leading '#'.
    */
   public function channelsFor(int $nid): array {
-    $channels = [];
     $shared = trim((string) $this->configFactory->get('asset_status.settings')->get('stale_slack_channel'));
     if ($shared !== '') {
-      $channels[] = '#' . ltrim($shared, '#');
+      return ['#' . ltrim($shared, '#')];
     }
     $node = $this->entityTypeManager->getStorage('node')->load($nid);
-    if ($node) {
-      $own = '';
-      if ($node->hasField('field_item_slack_channel') && !$node->get('field_item_slack_channel')->isEmpty()) {
-        $own = (string) $node->get('field_item_slack_channel')->value;
-      }
-      elseif ($node->hasField('field_item_area_interest') && !$node->get('field_item_area_interest')->isEmpty()) {
-        $term = $node->get('field_item_area_interest')->entity;
-        if ($term && $term->hasField('field_interest_slack_channel') && !$term->get('field_interest_slack_channel')->isEmpty()) {
-          $own = (string) $term->get('field_interest_slack_channel')->value;
-        }
-      }
-      $own = trim($own);
-      if ($own !== '') {
-        $own = '#' . ltrim($own, '#');
-        if (!in_array($own, $channels, TRUE)) {
-          $channels[] = $own;
-        }
+    if (!$node) {
+      return [];
+    }
+    $own = '';
+    if ($node->hasField('field_item_slack_channel') && !$node->get('field_item_slack_channel')->isEmpty()) {
+      $own = (string) $node->get('field_item_slack_channel')->value;
+    }
+    elseif ($node->hasField('field_item_area_interest') && !$node->get('field_item_area_interest')->isEmpty()) {
+      $term = $node->get('field_item_area_interest')->entity;
+      if ($term && $term->hasField('field_interest_slack_channel') && !$term->get('field_interest_slack_channel')->isEmpty()) {
+        $own = (string) $term->get('field_interest_slack_channel')->value;
       }
     }
-    return $channels;
+    $own = trim($own);
+    return $own === '' ? [] : ['#' . ltrim($own, '#')];
   }
 
   /**

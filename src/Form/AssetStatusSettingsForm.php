@@ -68,7 +68,7 @@ final class AssetStatusSettingsForm extends ConfigFormBase {
     $form['stale']['stale_slack_channel'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Channel that receives every reminder'),
-      '#description' => $this->t("Reminders also go to the tool's own channel (or its area channel) when one is set. Leave empty to post only there."),
+      '#description' => $this->t("Staff channel for every reminder. Reminders do not go to the tool's own member channel; that is used only if this is left empty."),
       '#default_value' => $config->get('stale_slack_channel'),
       '#maxlength' => 80,
     ];
