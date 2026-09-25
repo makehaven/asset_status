@@ -13,15 +13,27 @@
  * - history_url: URL to the asset history page.
  * - staff_action_url: (Optional) URL for staff to update status and log — only
  *   present for non-operational statuses and users with the right permission.
+ * - parent: (Optional) {title, url} of the tool this machine belongs to, on a
+ *   unit page.
+ * - units: (Optional) one entry per machine of a multi-unit tool:
+ *   {title, url, status, status_class, usable, since, expected_back, overdue,
+ *   update_url, report_url}. When set, status_label is the roll-up
+ *   ("1 of 2 machines available") and message/history are not used.
  */
 #}
-{% if history_url %}
+{% if parent %}
+  <div class="asset-unit-parent-note">
+    {{ 'Part of'|t }} <a href="{{ parent.url }}">{{ parent.title }}</a>
+  </div>
+{% endif %}
+
+{% if history_url and not units %}
   <a href="{{ history_url }}" class="asset-status-link" title="{{ 'View maintenance history'|t }}">
 {% endif %}
 
-<div class="asset-status-block {{ status_class }}">
+<div class="asset-status-block {{ status_class }}{{ units ? ' asset-status-block--units' }}">
   <div class="status-label">
-    Status: {{ status_label }}
+    {{ units ? status_label : 'Status: ' ~ status_label }}
   </div>
 
   {% if message %}
@@ -41,8 +53,31 @@
   {% endif %}
 </div>
 
-{% if history_url %}
+{% if history_url and not units %}
   </a>
+{% endif %}
+
+{% if units %}
+  <ul class="asset-units" id="asset-status-units">
+    {% for unit in units %}
+      <li class="asset-unit {{ unit.status_class }}{{ unit.usable ? ' asset-unit--usable' : ' asset-unit--down' }}">
+        <a class="asset-unit__title" href="{{ unit.url }}">{{ unit.title }}</a>
+        <span class="asset-unit__status">{{ unit.status }}</span>
+        {% if unit.since or unit.expected_back %}
+          <span class="asset-unit__dates">
+            {% if unit.since %}{{ 'since @date'|t({'@date': unit.since}) }}{% endif %}
+            {% if unit.expected_back %}
+              · <span class="{{ unit.overdue ? 'asset-status-expected--overdue' }}">{{ unit.overdue ? 'expected back @date, overdue'|t({'@date': unit.expected_back}) : 'back ~@date'|t({'@date': unit.expected_back}) }}</span>
+            {% endif %}
+          </span>
+        {% endif %}
+        <span class="asset-unit__actions">
+          <a class="asset-unit__report" href="{{ unit.report_url }}">{{ 'Report a problem'|t }}</a>
+          {% if unit.update_url %}<a class="asset-unit__update" href="{{ unit.update_url }}">{{ 'Update'|t }}</a>{% endif %}
+        </span>
+      </li>
+    {% endfor %}
+  </ul>
 {% endif %}
 
 {% if staff_action_url %}
@@ -51,4 +86,6 @@
   </a>
 {% endif %}
 
-<a href="#reporting-boxes" class="report-issue-link">Report Issue</a>
+{% if not units %}
+  <a href="#reporting-boxes" class="report-issue-link">Report Issue</a>
+{% endif %}

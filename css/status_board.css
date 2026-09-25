@@ -158,3 +158,16 @@
   color: #b45309;
   font-weight: 600;
 }
+
+/* Multi-unit tools: machines nested under their tool. */
+.tool-status-board-table tr.row-unit td:nth-child(2) {
+  padding-left: 1.75rem;
+  font-size: 0.95em;
+}
+.tool-status-board-table tr.row-unit .unit-indent {
+  color: #888;
+  margin-right: 0.25rem;
+}
+.tool-status-board-table tr.row-multi-unit td:nth-child(2) {
+  font-weight: 600;
+}

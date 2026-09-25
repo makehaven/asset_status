@@ -14,6 +14,7 @@ use Drupal\Core\Url;
 use Drupal\Core\Access\AccessManagerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\node\NodeInterface;
+use Drupal\asset_status\Service\UnitManager;
 
 /**
  * Provides an 'Asset Status' block with detailed log info.
@@ -57,14 +58,22 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
   protected $currentUser;
 
   /**
+   * Multi-unit tool helper.
+   *
+   * @var \Drupal\asset_status\Service\UnitManager
+   */
+  protected $units;
+
+  /**
    * Constructs a new AssetStatusBlock.
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, RouteMatchInterface $route_match, AccessManagerInterface $access_manager, AccountProxyInterface $current_user) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, RouteMatchInterface $route_match, AccessManagerInterface $access_manager, AccountProxyInterface $current_user, UnitManager $units) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
     $this->entityTypeManager = $entity_type_manager;
     $this->routeMatch = $route_match;
     $this->accessManager = $access_manager;
     $this->currentUser = $current_user;
+    $this->units = $units;
   }
 
   /**
@@ -78,7 +87,8 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
       $container->get('entity_type.manager'),
       $container->get('current_route_match'),
       $container->get('access_manager'),
-      $container->get('current_user')
+      $container->get('current_user'),
+      $container->get('asset_status.units')
     );
   }
 
@@ -90,6 +100,11 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
 
     if (!$node instanceof NodeInterface || $node->bundle() !== 'item' || !$node->hasField('field_item_status')) {
       return [];
+    }
+
+    // A tool made of several machines shows its machines, not its own status.
+    if ($this->units->hasUnits($node)) {
+      return $this->buildUnitsRollup($node);
     }
 
     $status_field = $node->get('field_item_status');
@@ -131,14 +146,18 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
     // Normalized to match legacy and new terms.
     $class_map = [
       'Operational' => 'status-operational',
-      'Active' => 'status-operational', // Legacy
+    // Legacy.
+      'Active' => 'status-operational',
       'Reported Concern' => 'status-reported-concern',
       'Degraded' => 'status-degraded',
-      'Maintenance' => 'status-degraded', // Legacy
+    // Legacy.
+      'Maintenance' => 'status-degraded',
       'Out of Service' => 'status-out-of-service',
-      'Gone' => 'status-out-of-service', // Legacy
+    // Legacy.
+      'Gone' => 'status-out-of-service',
       'Setup / Training Only' => 'status-setup',
-      'Setup' => 'status-setup', // Legacy
+    // Legacy.
+      'Setup' => 'status-setup',
       'Storage' => 'status-storage',
     ];
 
@@ -214,6 +233,7 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
       '#overdue' => $overdue,
       '#history_url' => $history_url,
       '#staff_action_url' => $staff_action_url,
+      '#parent' => $this->parentVariable($node),
       '#attached' => [
         'library' => [
           'asset_status/asset_status_block',
@@ -227,6 +247,114 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
     ];
 
     return $build;
+  }
+
+  /**
+   * Link data for "Part of <tool>" on a unit page, NULL for everything else.
+   */
+  protected function parentVariable(NodeInterface $node): ?array {
+    if (!$this->units->isUnit($node)) {
+      return NULL;
+    }
+    $parent = $this->units->getParent($node);
+    if (!$parent || !$parent->access('view')) {
+      return NULL;
+    }
+    return [
+      'title' => $parent->label(),
+      'url' => $parent->toUrl()->toString(),
+    ];
+  }
+
+  /**
+   * The block for a tool with units: "1 of 2 available" plus one row per machine.
+   *
+   * The tool's own status field is deliberately ignored here — it is kept in
+   * step by UnitManager::syncParentStatus() for code that reads it, but the
+   * machines are the truth a member needs.
+   */
+  protected function buildUnitsRollup(NodeInterface $node): array {
+    $summary = $this->units->summary($node);
+    $date_formatter = \Drupal::service('date.formatter');
+    $now = \Drupal::time()->getRequestTime();
+    $can_update = $this->accessManager->checkNamedRoute('asset_status.quick_status_update', ['node' => $node->id()], $this->currentUser, TRUE);
+
+    $class_map = [
+      'Operational' => 'status-operational',
+      'Reported Concern' => 'status-reported-concern',
+      'Degraded' => 'status-degraded',
+      'Offline for Maintenance' => 'status-out-of-service',
+      'Out of Service' => 'status-out-of-service',
+      'Storage' => 'status-storage',
+    ];
+    $usable_but_flagged = ['Reported Concern', 'Degraded'];
+
+    $items = [];
+    $tags = $node->getCacheTags();
+    foreach ($summary['units'] as $unit) {
+      $unit_node = $this->entityTypeManager->getStorage('node')->load($unit['nid']);
+      if (!$unit_node) {
+        continue;
+      }
+      $tags = Cache::mergeTags($tags, $unit_node->getCacheTags());
+      $flagged = !$unit['usable'] || in_array($unit['status'], $usable_but_flagged, TRUE);
+      $expected = $unit['expected_back'] ? strtotime($unit['expected_back']) : NULL;
+      $items[] = [
+        'title' => $unit['title'],
+        'url' => $unit_node->toUrl()->toString(),
+        'status' => $unit['status'],
+        'status_class' => $class_map[$unit['status']] ?? 'status-unknown',
+        'usable' => $unit['usable'],
+        'since' => ($flagged && $unit['since']) ? (string) $date_formatter->format($unit['since'], 'custom', 'M j') : NULL,
+        'expected_back' => ($flagged && $expected) ? (string) $date_formatter->format($expected, 'custom', 'M j') : NULL,
+        'overdue' => $expected !== NULL && $expected + 86399 < $now,
+        'update_url' => $can_update->isAllowed()
+          ? Url::fromRoute('asset_status.quick_status_update', ['node' => $unit['nid']])->toString()
+          : NULL,
+        'report_url' => Url::fromUserInput('/equipment/issue', [
+          'query' => [
+            'equipment_name' => $unit['title'] . ' (' . $node->label() . ')',
+            'asset_nid' => $unit['nid'],
+          ],
+        ])->toString(),
+      ];
+    }
+
+    if ($summary['total'] === 0) {
+      $label = (string) $this->t('No machines in service');
+      $class = 'status-out-of-service';
+    }
+    elseif ($summary['available'] === $summary['total']) {
+      $label = (string) $this->formatPlural($summary['total'], '1 machine available', '@count of @count machines available');
+      $class = 'status-operational';
+    }
+    elseif ($summary['available'] === 0) {
+      $label = (string) $this->formatPlural($summary['total'], 'The machine is out of service', 'All @count machines out of service');
+      $class = 'status-out-of-service';
+    }
+    else {
+      $label = (string) $this->t('@available of @total machines available', [
+        '@available' => $summary['available'],
+        '@total' => $summary['total'],
+      ]);
+      $class = 'status-degraded';
+    }
+
+    return [
+      '#theme' => 'asset_status_block',
+      '#status_label' => $label,
+      '#status_class' => $class,
+      '#units' => $items,
+      '#attached' => [
+        'library' => ['asset_status/asset_status_block', 'asset_status/units'],
+        'drupalSettings' => ['assetStatus' => ['unitsParentNid' => (int) $node->id()]],
+      ],
+      '#cache' => [
+        'tags' => Cache::mergeTags($tags, ['asset_log_entry_list']),
+        'contexts' => Cache::mergeContexts(['user.permissions'], $can_update->getCacheContexts()),
+        'max-age' => $can_update->getCacheMaxAge(),
+      ],
+    ];
   }
 
 }

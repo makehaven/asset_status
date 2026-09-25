@@ -21,3 +21,10 @@ services:
       - '@datetime.time'
       - '@http_client'
       - '@logger.factory'
+
+  asset_status.units:
+    class: Drupal\asset_status\Service\UnitManager
+    arguments:
+      - '@entity_type.manager'
+      - '@database'
+      - '@asset_status.availability'

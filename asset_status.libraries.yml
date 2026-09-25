@@ -27,3 +27,10 @@ status_board:
   css:
     component:
       css/status_board.css: {}
+
+units:
+  js:
+    js/asset_units.js: {}
+  dependencies:
+    - core/drupal
+    - core/drupalSettings

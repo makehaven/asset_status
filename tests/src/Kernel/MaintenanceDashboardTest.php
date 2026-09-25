@@ -41,6 +41,8 @@ class MaintenanceDashboardTest extends KernelTestBase {
     'datetime',
     'options',
     'workflows',
+    'file',
+    'image',
   ];
 
   /**

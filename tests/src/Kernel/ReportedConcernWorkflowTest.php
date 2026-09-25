@@ -42,6 +42,8 @@ class ReportedConcernWorkflowTest extends KernelTestBase {
     'datetime',
     'options',
     'workflows',
+    'file',
+    'image',
   ];
 
   /**

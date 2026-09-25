@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Drupal\asset_status\Controller;
 
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Database\Connection;
+use Drupal\asset_status\Service\UnitManager;
 use Drupal\Core\Link;
 use Drupal\Core\Render\Markup;
 use Drupal\Core\Url;
@@ -66,10 +68,14 @@ final class ToolStatusBoardController extends ControllerBase {
 
   public function __construct(
     private readonly Connection $database,
+    private readonly UnitManager $units,
   ) {}
 
+  /**
+   *
+   */
   public static function create(ContainerInterface $container): static {
-    return new static($container->get('database'));
+    return new static($container->get('database'), $container->get('asset_status.units'));
   }
 
   /**
@@ -156,8 +162,8 @@ final class ToolStatusBoardController extends ControllerBase {
       $row->seconds_offline = $now - (int) $since;
     }
 
-    // Sort.
-    $rows = $this->sortRows($rows, $sort_by, $sort_order);
+    // Sort, keeping each multi-unit tool's machines under their tool.
+    $rows = $this->groupAndSort($rows, $sort_by, $sort_order);
 
     // Build the render array.
     $build = [];
@@ -209,6 +215,91 @@ final class ToolStatusBoardController extends ControllerBase {
   /**
    * Sorts the rows array by the requested column.
    */
+
+  /**
+   * Nests each multi-unit tool's machines under the tool, then sorts.
+   *
+   * A unit row that appears without its tool (the tool is filtered out, or
+   * retired) is shown on its own, named "Laser 2 (32x18 ULS Laser Cutter)".
+   * A tool with units sorts by its worst machine and carries `units` for the
+   * "1 of 2 available" cell; its own status field is not shown.
+   *
+   * @param object[] $rows
+   *   Board rows from the main query.
+   * @param string $sort_by
+   *   Sort column.
+   * @param string $sort_order
+   *   Sort direction.
+   *
+   * @return object[]
+   *   Rows in display order, machines directly after their tool.
+   */
+  private function groupAndSort(array $rows, string $sort_by, string $sort_order): array {
+    $by_nid = [];
+    foreach ($rows as $row) {
+      $row->is_unit = FALSE;
+      $row->units = [];
+      $by_nid[(int) $row->nid] = $row;
+    }
+    $parent_map = $this->units->parentMap(array_keys($by_nid));
+    if (!$parent_map) {
+      return $this->sortRows($rows, $sort_by, $sort_order);
+    }
+
+    $parent_titles = [];
+    $orphan_parents = array_diff(array_unique($parent_map), array_keys($by_nid));
+    if ($orphan_parents) {
+      $parent_titles = $this->database->select('node_field_data', 'n')
+        ->fields('n', ['nid', 'title'])
+        ->condition('n.nid', $orphan_parents, 'IN')
+        ->execute()
+        ->fetchAllKeyed();
+    }
+
+    $top = [];
+    foreach ($rows as $row) {
+      $nid = (int) $row->nid;
+      if (!isset($parent_map[$nid])) {
+        continue;
+      }
+      $row->is_unit = TRUE;
+      $parent_nid = $parent_map[$nid];
+      if (isset($by_nid[$parent_nid])) {
+        $by_nid[$parent_nid]->units[] = $row;
+      }
+      else {
+        // Tool not on the board: show the machine with its tool's name.
+        $row->title = sprintf('%s (%s)', $row->title, $parent_titles[$parent_nid] ?? $this->t('tool'));
+        $row->is_unit = FALSE;
+      }
+    }
+    foreach ($rows as $row) {
+      if ($row->is_unit) {
+        continue;
+      }
+      if ($row->units) {
+        $row->units = $this->sortRows($row->units, $sort_by, $sort_order);
+        $row->severity = min(array_map(fn($u) => $u->severity, $row->units));
+        $row->seconds_offline = max(array_map(fn($u) => $u->severity <= 2 ? $u->seconds_offline : 0, $row->units));
+        $row->units_available = count(array_filter($row->units, fn($u) => in_array($u->status_label, ['Operational', 'Active', 'Reported Concern', 'Degraded'], TRUE)));
+      }
+      $top[] = $row;
+    }
+
+    $top = $this->sortRows($top, $sort_by, $sort_order);
+    $flat = [];
+    foreach ($top as $row) {
+      $flat[] = $row;
+      foreach ($row->units as $unit) {
+        $flat[] = $unit;
+      }
+    }
+    return $flat;
+  }
+
+  /**
+   *
+   */
   private function sortRows(array $rows, string $sort_by, string $sort_order): array {
     usort($rows, function ($a, $b) use ($sort_by, $sort_order): int {
       $cmp = match ($sort_by) {
@@ -225,7 +316,8 @@ final class ToolStatusBoardController extends ControllerBase {
   /**
    * Returns the filter bar markup (status + area dropdowns).
    *
-   * @param array $area_terms  Array of stdClass rows with tid/name/weight/parent_tid/parent_name/parent_weight.
+   * @param array $area_terms
+   *   Array of stdClass rows with tid/name/weight/parent_tid/parent_name/parent_weight.
    */
   private function buildFilterBar(
     string $status_filter,
@@ -245,8 +337,10 @@ final class ToolStatusBoardController extends ControllerBase {
     // Root terms (parent_tid == 0) become <optgroup> labels; children go inside.
     // Dedup by tid (DISTINCT on multi-join can occasionally repeat).
     $seen_tids = [];
-    $groups    = [];  // parent_tid => ['label' => string, 'weight' => int, 'options' => [...]]
-    $roots     = [];  // standalone root terms with no parent
+    // parent_tid => ['label' => string, 'weight' => int, 'options' => [...]].
+    $groups = [];
+    // Standalone root terms with no parent.
+    $roots = [];
 
     foreach ($area_terms as $row) {
       if (isset($seen_tids[$row->tid])) {
@@ -280,7 +374,8 @@ final class ToolStatusBoardController extends ControllerBase {
     // Render root terms that have NO children as standalone options first.
     foreach ($roots as $tid => $row) {
       if (isset($groups[$tid])) {
-        continue; // has children — will appear as optgroup label instead
+        // Has children — will appear as optgroup label instead.
+        continue;
       }
       $selected = ((string) $area_filter === (string) $tid) ? ' selected' : '';
       $area_options .= '<option value="' . $tid . '"' . $selected . '>' . htmlspecialchars($row->name) . '</option>';
@@ -318,6 +413,10 @@ final class ToolStatusBoardController extends ControllerBase {
   private function buildStatsStrip(array $rows): array {
     $counts = ['light-green' => 0, 'light-amber' => 0, 'light-red' => 0, 'light-grey' => 0];
     foreach ($rows as $row) {
+      // A tool with machines is counted through its machines, not itself.
+      if (!empty($row->units)) {
+        continue;
+      }
       $class = self::LIGHT_CLASS[$row->status_label] ?? 'light-grey';
       $counts[$class]++;
     }
@@ -376,13 +475,33 @@ final class ToolStatusBoardController extends ControllerBase {
       $time_str    = $is_offline ? $this->formatSeconds((int) $row->seconds_offline) : '—';
 
       $tool_link = Link::fromTextAndUrl($row->title, Url::fromRoute('entity.node.canonical', ['node' => $row->nid]));
+      $classes = $is_offline ? ['row-offline'] : [];
+      $status_cell = '<span class="status-badge-sm status-badge-' . $light_class . '">' . htmlspecialchars($row->status_label) . '</span>';
+
+      if (!empty($row->units)) {
+        // A tool made of machines: the cell is the roll-up, the light is the
+        // worst machine's.
+        $total = count($row->units);
+        $available = (int) ($row->units_available ?? 0);
+        $light_class = $available === $total ? 'light-green' : ($available === 0 ? 'light-red' : 'light-amber');
+        $status_cell = '<span class="status-badge-sm status-badge-' . $light_class . '">'
+          . htmlspecialchars((string) $this->t('@available of @total available', ['@available' => $available, '@total' => $total]))
+          . '</span>';
+        $classes[] = 'row-multi-unit';
+        $classes = array_diff($classes, ['row-offline']);
+        $time_str = $is_offline ? $this->formatSeconds((int) $row->seconds_offline) : '—';
+      }
+      if (!empty($row->is_unit)) {
+        $classes[] = 'row-unit';
+        $tool_link = Markup::create('<span class="unit-indent" aria-hidden="true">↳</span> ' . $tool_link->toString());
+      }
 
       $table_rows[] = [
-        'class' => $is_offline ? ['row-offline'] : [],
+        'class' => $classes,
         'data'  => [
           ['data' => Markup::create('<span class="status-light ' . $light_class . '" title="' . htmlspecialchars($row->status_label) . '"></span>'), 'class' => ['col-light']],
           ['data' => $tool_link],
-          ['data' => Markup::create('<span class="status-badge-sm status-badge-' . $light_class . '">' . htmlspecialchars($row->status_label) . '</span>')],
+          ['data' => Markup::create($status_cell)],
           ['data' => Markup::create('<span class="time-in-status' . ($is_offline ? ' time-offline' : '') . '">' . $time_str . '</span>')],
         ],
       ];
@@ -400,7 +519,7 @@ final class ToolStatusBoardController extends ControllerBase {
   /**
    * Converts a duration in seconds to a compact human-readable string.
    */
-  private function formatSeconds(int $seconds): string|\Drupal\Core\StringTranslation\TranslatableMarkup {
+  private function formatSeconds(int $seconds): string|TranslatableMarkup {
     if ($seconds < 3600) {
       return $this->t('@m min', ['@m' => max(1, (int) round($seconds / 60))]);
     }

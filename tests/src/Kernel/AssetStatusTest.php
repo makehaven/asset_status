@@ -34,6 +34,8 @@ class AssetStatusTest extends KernelTestBase {
     'datetime',
     'options',
     'workflows',
+    'file',
+    'image',
   ];
 
   /**
@@ -430,8 +432,16 @@ class AssetStatusTest extends KernelTestBase {
       \Drupal::service('entity.form_builder')
     );
     $build = $controller->history($node);
-    $this->assertNotEmpty($build['#rows']);
-    $this->assertEquals('Unknown user', (string) $build['#rows'][0][1]['data']);
+    // history() wraps the table in a page with the section nav; find the table.
+    $table = isset($build['#rows']) ? $build : NULL;
+    foreach ($build as $child) {
+      if ($table === NULL && is_array($child) && isset($child['#rows'])) {
+        $table = $child;
+      }
+    }
+    $this->assertNotNull($table, 'history() returns a table');
+    $this->assertNotEmpty($table['#rows']);
+    $this->assertEquals('Unknown user', (string) $table['#rows'][0][1]['data']);
 
     $entity_type = \Drupal::entityTypeManager()->getDefinition('asset_log_entry');
     $list_builder = AssetLogEntryListBuilder::createInstance(\Drupal::getContainer(), $entity_type);

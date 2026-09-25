@@ -2,7 +2,13 @@
 
 declare(strict_types=1);
 
+use Drupal\Core\Cache\Cache;
+use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+use Drupal\Core\Entity\Entity\EntityViewDisplay;
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\views\Plugin\views\query\QueryPluginBase;
+use Drupal\views\Plugin\views\query\Sql;
+use Drupal\views\ViewExecutable;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\node\NodeInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
@@ -123,6 +129,9 @@ function asset_status_handle_node_status_change(EntityInterface $entity, bool $i
     return;
   }
 
+  // The set (parent → units) or a unit's status may just have changed.
+  \Drupal::service('asset_status.units')->resetCache();
+
   $current_term = !$entity->get('field_item_status')->isEmpty()
     ? $entity->get('field_item_status')->entity
     : NULL;
@@ -146,6 +155,109 @@ function asset_status_handle_node_status_change(EntityInterface $entity, bool $i
 
   \Drupal::service('asset_status.status_change_logger')
     ->handleNodeStatusChange($entity, $original_term, $current_term, $context);
+
+  // A unit retiring (or coming back) can change what its tool is.
+  if ($original_term?->id() !== $current_term?->id()) {
+    \Drupal::service('asset_status.units')->syncParentStatus($entity);
+  }
+}
+
+/**
+ * Implements hook_node_view().
+ *
+ * A unit page (one machine of a multi-unit tool) is thin by design: its own
+ * fields hold only what is per machine. So that a label on the machine can
+ * point straight at the unit, the full page borrows the parent tool's
+ * documentation — description, badge, instructions, manuals, videos — for
+ * every field the unit leaves empty, and says which tool it is part of.
+ */
+function asset_status_node_view(array &$build, EntityInterface $node, EntityViewDisplayInterface $display, string $view_mode): void {
+  if (!$node instanceof NodeInterface || $node->bundle() !== 'item' || $view_mode !== 'full') {
+    return;
+  }
+  /** @var \Drupal\asset_status\Service\UnitManager $units */
+  $units = \Drupal::service('asset_status.units');
+  if (!$units->isUnit($node)) {
+    return;
+  }
+  $parent = $units->getParent($node);
+  if (!$parent || !$parent->access('view')) {
+    return;
+  }
+
+  $build['asset_status_parent'] = [
+    '#type' => 'container',
+    '#attributes' => ['class' => ['asset-unit-parent']],
+    '#weight' => -100,
+    'text' => [
+      '#markup' => t('One of the machines of <a href=":url">@tool</a>. Instructions and badge requirements below are the tool\'s.', [
+        ':url' => $parent->toUrl()->toString(),
+        '@tool' => $parent->label(),
+      ]),
+    ],
+  ];
+
+  $borrowed = [
+    'field_item_image',
+    'body',
+    'field_member_badges',
+    'field_additional_badges',
+    'field_item_instructions',
+    'field_manuals',
+    'field_item_member_only_informati',
+    'field_item_requirements',
+    'field_item_instructional_video',
+    'field_item_videos',
+    'field_item_hazard_band',
+    'field_item_slack_channel',
+    'field_item_location',
+  ];
+  $parent_display = EntityViewDisplay::collectRenderDisplay($parent, 'full');
+  foreach ($borrowed as $field) {
+    if (!$parent->hasField($field) || $parent->get($field)->isEmpty()) {
+      continue;
+    }
+    if ($node->hasField($field) && !$node->get($field)->isEmpty()) {
+      continue;
+    }
+    $component = $parent_display->getComponent($field);
+    if (!$component) {
+      continue;
+    }
+    if (!$parent->get($field)->access('view')) {
+      continue;
+    }
+    $build[$field] = $parent->get($field)->view($component);
+    $build[$field]['#weight'] = $component['weight'] ?? 0;
+  }
+
+  $build['#cache']['tags'] = Cache::mergeTags($build['#cache']['tags'] ?? [], $parent->getCacheTags());
+}
+
+/**
+ * Implements hook_views_query_alter().
+ *
+ * Unit nodes are machines, not tools: the equipment list must show the tool
+ * once, not once per machine. Any other item listing that should behave the
+ * same way can be added to the list below.
+ */
+function asset_status_views_query_alter(ViewExecutable $view, QueryPluginBase $query): void {
+  static $views = ['equipment' => TRUE, 'asset_status' => TRUE];
+  if (!isset($views[$view->id()]) || !$query instanceof Sql) {
+    return;
+  }
+  $tid = \Drupal::service('asset_status.units')->unitTermId();
+  if ($tid === NULL) {
+    return;
+  }
+  $base = $view->storage->get('base_table') === 'node_field_data' ? 'node_field_data' : NULL;
+  if (!$base) {
+    return;
+  }
+  $query->addWhereExpression(0,
+    "$base.nid NOT IN (SELECT c.entity_id FROM {node__field_item_category} c WHERE c.field_item_category_target_id = :asset_status_unit_tid AND c.deleted = 0)",
+    [':asset_status_unit_tid' => $tid]
+  );
 }
 
 /**
@@ -184,6 +296,8 @@ function asset_status_theme(): array {
         'message' => NULL,
         'history_url' => NULL,
         'staff_action_url' => NULL,
+        'parent' => NULL,
+        'units' => NULL,
       ],
     ],
   ];

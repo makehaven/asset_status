@@ -219,7 +219,14 @@ class StaleStatusMonitor {
     $tool_url = Url::fromRoute('entity.node.canonical', ['node' => $item['nid']], ['absolute' => TRUE])->toString();
     $since = date('M j', $item['since']);
 
-    $line = sprintf('%s has been *%s* for %d days (last note %s).', $item['title'], $item['status'], $item['days'], $since);
+    $title = $item['title'];
+    if (\Drupal::hasService('asset_status.units')) {
+      $node = $this->entityTypeManager->getStorage('node')->load($item['nid']);
+      if ($node instanceof \Drupal\node\NodeInterface) {
+        $title = \Drupal::service('asset_status.units')->displayTitle($node);
+      }
+    }
+    $line = sprintf('%s has been *%s* for %d days (last note %s).', $title, $item['status'], $item['days'], $since);
     if ($item['expected_back']) {
       $line .= $item['overdue']
         ? sprintf(' It was expected back %s and is now overdue.', date('M j', strtotime($item['expected_back'])))
