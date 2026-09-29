@@ -270,9 +270,9 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
   /**
    * The block for a tool with units: "1 of 2 available" plus one row per machine.
    *
-   * The tool's own status field is deliberately ignored here — it is kept in
-   * step by UnitManager::syncParentStatus() for code that reads it, but the
-   * machines are the truth a member needs.
+   * The machines are the truth a member needs. The tool's own status is shown
+   * only when it is not Operational (a report on the tool itself, or the whole
+   * station taken offline), and when it is unusable it overrides the roll-up.
    */
   protected function buildUnitsRollup(NodeInterface $node): array {
     $summary = $this->units->summary($node);
@@ -342,11 +342,40 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
       $class = 'status-degraded';
     }
 
+    // A report filed against the tool itself (an old link, or the form with
+    // scripts off) lands on the parent, and so does a deliberate whole-station
+    // "Offline". Without this line the page would still say "2 of 2 available".
+    $tool_status = NULL;
+    $own = $node->get('field_item_status')->entity;
+    if ($own && $own->label() !== 'Operational' && !$this->units->isRetired($node)) {
+      $latest = $this->entityTypeManager->getStorage('asset_log_entry')->getQuery()
+        ->condition('asset', $node->id())
+        ->sort('created', 'DESC')
+        ->range(0, 1)
+        ->accessCheck(FALSE)
+        ->execute();
+      $entry = $latest ? $this->entityTypeManager->getStorage('asset_log_entry')->load(reset($latest)) : NULL;
+      $tool_status = [
+        'status' => $own->label(),
+        'status_class' => $class_map[$own->label()] ?? 'status-unknown',
+        'message' => $entry ? ($entry->getDetails() ?: $entry->getSummary()) : NULL,
+        'since' => $entry ? (string) $date_formatter->format($entry->getCreatedTime(), 'custom', 'M j') : NULL,
+        'update_url' => $can_update->isAllowed()
+          ? Url::fromRoute('asset_status.quick_status_update', ['node' => $node->id()])->toString()
+          : NULL,
+      ];
+      if (!$this->units->isUsable($node)) {
+        $label = (string) $this->t('Out of service: @status', ['@status' => $own->label()]);
+        $class = 'status-out-of-service';
+      }
+    }
+
     return [
       '#theme' => 'asset_status_block',
       '#status_label' => $label,
       '#status_class' => $class,
       '#units' => $items,
+      '#tool_status' => $tool_status,
       '#attached' => [
         'library' => ['asset_status/asset_status_block', 'asset_status/units'],
         'drupalSettings' => ['assetStatus' => ['unitsParentNid' => (int) $node->id()]],

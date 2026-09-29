@@ -59,6 +59,15 @@
   </a>
 {% endif %}
 
+{% if units and tool_status %}
+  <div class="asset-tool-status {{ tool_status.status_class }}">
+    <strong>{{ 'Whole tool: @status'|t({'@status': tool_status.status}) }}</strong>
+    {% if tool_status.since %}<span class="asset-status-since">{{ 'since @date'|t({'@date': tool_status.since}) }}</span>{% endif %}
+    {% if tool_status.message %}<div class="asset-status-message">{{ tool_status.message }}</div>{% endif %}
+    {% if tool_status.update_url %}<a class="asset-unit__update" href="{{ tool_status.update_url }}">{{ 'Update'|t }}</a>{% endif %}
+  </div>
+{% endif %}
+
 {% if units %}
   <ul class="asset-units" id="asset-status-units">
     {% for unit in units %}

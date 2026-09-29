@@ -122,6 +122,24 @@
 .asset-status-block--units .status-label {
   font-weight: 600;
 }
+.asset-tool-status {
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-left: 4px solid #6c757d;
+  border-radius: 4px;
+}
+.asset-tool-status .asset-status-since {
+  margin-left: 6px;
+  font-size: 0.9em;
+}
+.asset-tool-status .asset-unit__update {
+  margin-left: 8px;
+}
+.asset-tool-status.status-reported-concern,
+.asset-tool-status.status-degraded { border-left-color: #a37a00; }
+.asset-tool-status.status-out-of-service { border-left-color: #b02a37; }
+.asset-tool-status.status-storage { border-left-color: #6c757d; }
 .asset-units {
   list-style: none;
   margin: 0 0 10px;
