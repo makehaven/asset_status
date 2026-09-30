@@ -299,7 +299,6 @@ function asset_status_theme(): array {
         'parent' => NULL,
         'serial' => NULL,
         'units' => NULL,
-        'tool_status' => NULL,
       ],
     ],
   ];
