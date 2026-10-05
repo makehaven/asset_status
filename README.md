@@ -16,6 +16,12 @@ maintenance logging module.
   `field_item_status` value is created, updated, or cleared. The service class
   lives at `asset_status.status_change_logger` and can be injected wherever
   future tooling (REST endpoints, batch processors) needs to create log entries.
+- Search API processor **Exclude retired equipment**
+  (`asset_status_exclude_retired`) keeps nodes whose `field_item_status` is a
+  retired status (`UnitManager::RETIRED_STATUSES`, i.e. "Gone") out of an index.
+  Enabled on the `site_content` index that backs `/search`; the tool page itself
+  stays reachable by URL. After enabling it on an index, reindex that index
+  (`drush sapi-r site_content && drush sapi-i site_content`).
 
 ## Install & local development
 
