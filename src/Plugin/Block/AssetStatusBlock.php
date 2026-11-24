@@ -114,6 +114,11 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
 
     /** @var \Drupal\taxonomy\TermInterface $term */
     $term = $status_field->entity;
+    // The field can point to a deleted term (24 unpublished tools on live,
+    // 2026-11-23); show nothing rather than a 500, like an empty status.
+    if (!$term) {
+      return [];
+    }
     $status_label = $term->label();
 
     // Fetch the latest log entry for this asset.
