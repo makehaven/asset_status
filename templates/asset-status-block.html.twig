@@ -8,7 +8,9 @@
  *   usable statuses; status_label then shows small beside it.
  * - note: (Optional) One line on what the status means.
  * - report: (Optional) An unconfirmed member report, reporter name removed,
- *   shown folded under "What was reported".
+ *   shown under the banner.
+ * - report_preview: (Optional) The report cut to ~70 characters; when set the
+ *   full report opens on tap.
  * - status_label: The human-readable label of the status.
  * - status_class: The CSS class for coloring (e.g., status-operational).
  * - message: (Optional) The latest log details message.
@@ -73,11 +75,15 @@
   </a>
 {% endif %}
 
-{% if report %}
+{% if report and report_preview %}
   <details class="asset-status-report">
-    <summary>{{ 'What was reported'|t }}</summary>
+    <summary><span class="asset-status-report__label">{{ 'Reported:'|t }}</span> {{ report_preview }} <span class="asset-status-report__more">{{ 'more'|t }}</span></summary>
     <p>{{ report }}</p>
   </details>
+{% elseif report %}
+  <div class="asset-status-report">
+    <span class="asset-status-report__label">{{ 'Reported:'|t }}</span> {{ report }}
+  </div>
 {% endif %}
 
 {% if units %}

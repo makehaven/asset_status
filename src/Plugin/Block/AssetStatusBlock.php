@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\asset_status\Plugin\Block;
 
+use Drupal\Component\Utility\Unicode;
 use Drupal\Core\Block\BlockBase;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -235,12 +236,19 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
     $headline = NULL;
     $note = NULL;
     $report = NULL;
+    $report_preview = NULL;
     if ($status_label === 'Reported Concern') {
       $headline = (string) $this->t('OK to use');
       $note = (string) $this->t('A member reported a problem. Staff have not checked it yet.');
       if ($latest_message !== '' && $logs) {
         $report = self::stripReporterName($latest_message);
         $latest_message = '';
+        // A few words are enough to tell "scanning" from "printing"; the
+        // rest opens on tap. Short reports show whole, with nothing to open.
+        $report_preview = Unicode::truncate($report, 70, TRUE, TRUE);
+        if ($report_preview === $report) {
+          $report_preview = NULL;
+        }
       }
     }
     elseif (in_array($status_label, ['Degraded', 'Maintenance'], TRUE)) {
@@ -253,6 +261,7 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
       '#headline' => $headline,
       '#note' => $note,
       '#report' => $report,
+      '#report_preview' => $report_preview,
       '#status_label' => $status_label,
       '#status_class' => $css_class,
       '#message' => $latest_message,

@@ -218,7 +218,16 @@
 }
 .asset-status-report summary {
   cursor: pointer;
+}
+.asset-status-report__label {
   font-weight: 600;
+}
+.asset-status-report__more {
+  text-decoration: underline;
+  white-space: nowrap;
+}
+.asset-status-report[open] .asset-status-report__more {
+  display: none;
 }
 .asset-status-report p {
   margin: 6px 0 0;
