@@ -180,3 +180,46 @@
 .asset-unit-parent-note .asset-unit__serial {
   margin-left: 8px;
 }
+
+/* --- Flagged but usable: answer "can I use it?" first (2026-11-25) ------- */
+.asset-status-headline {
+  display: block;
+  font-size: 1.1em;
+}
+.asset-status-term {
+  display: block;
+  font-size: 0.75em;
+  opacity: 0.85;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.asset-status-note {
+  margin-top: 4px;
+  font-size: 0.85em;
+}
+/* An unconfirmed report reads as information, not an alarm: light panel,
+   dark text, instead of the solid amber bar. */
+.asset-status-block.status-reported-concern {
+  background: #fff7e0;
+  color: #3d2e00;
+  text-shadow: none;
+  border: 1px solid #e3c766;
+  border-left: 6px solid #2e7d32;
+}
+.asset-status-report {
+  margin: -4px 0 10px;
+  padding: 6px 10px;
+  border: 1px solid #e3c766;
+  border-top: 0;
+  border-radius: 0 0 4px 4px;
+  background: #fffbef;
+  font-size: 0.9em;
+  text-align: left;
+}
+.asset-status-report summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.asset-status-report p {
+  margin: 6px 0 0;
+}

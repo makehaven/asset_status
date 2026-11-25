@@ -227,9 +227,32 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
       }
     }
 
+    // A member reading a flagged-but-usable tool needs the answer to "can I
+    // use it?" before anything else (feedback 2026-11-25: an Office Printer
+    // report about scanning left a member unsure whether they could print).
+    // Say it in the headline, and fold an unconfirmed member report away
+    // under "What was reported" instead of printing it as the tool's status.
+    $headline = NULL;
+    $note = NULL;
+    $report = NULL;
+    if ($status_label === 'Reported Concern') {
+      $headline = (string) $this->t('OK to use');
+      $note = (string) $this->t('A member reported a problem. Staff have not checked it yet.');
+      if ($latest_message !== '' && $logs) {
+        $report = self::stripReporterName($latest_message);
+        $latest_message = '';
+      }
+    }
+    elseif (in_array($status_label, ['Degraded', 'Maintenance'], TRUE)) {
+      $headline = (string) $this->t('Usable, with a known problem');
+    }
+
     // Build the render array.
     $build = [
       '#theme' => 'asset_status_block',
+      '#headline' => $headline,
+      '#note' => $note,
+      '#report' => $report,
       '#status_label' => $status_label,
       '#status_class' => $css_class,
       '#message' => $latest_message,
@@ -253,6 +276,16 @@ class AssetStatusBlock extends BlockBase implements ContainerFactoryPluginInterf
     ];
 
     return $build;
+  }
+
+  /**
+   * Drops the "Member Report (Name): " prefix the report webform prepends.
+   *
+   * Tool pages are public; the reporter's name is for staff, who see it in
+   * the history and the maintenance dashboard.
+   */
+  public static function stripReporterName(string $text): string {
+    return preg_match('/^Member Report \([^)]+\): (.+)$/s', $text, $m) ? $m[1] : $text;
   }
 
   /**

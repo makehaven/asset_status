@@ -288,6 +288,9 @@ function asset_status_theme(): array {
   return [
     'asset_status_block' => [
       'variables' => [
+        'headline' => NULL,
+        'note' => NULL,
+        'report' => NULL,
         'since' => NULL,
         'expected_back' => NULL,
         'overdue' => FALSE,

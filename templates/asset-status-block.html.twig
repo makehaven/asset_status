@@ -4,6 +4,11 @@
  * Default theme implementation for the Asset Status Block.
  *
  * Available variables:
+ * - headline: (Optional) Plain answer to "can I use it?" for flagged but
+ *   usable statuses; status_label then shows small beside it.
+ * - note: (Optional) One line on what the status means.
+ * - report: (Optional) An unconfirmed member report, reporter name removed,
+ *   shown folded under "What was reported".
  * - status_label: The human-readable label of the status.
  * - status_class: The CSS class for coloring (e.g., status-operational).
  * - message: (Optional) The latest log details message.
@@ -35,8 +40,17 @@
 
 <div class="asset-status-block {{ status_class }}{{ units ? ' asset-status-block--units' }}">
   <div class="status-label">
-    {{ units ? status_label : 'Status: ' ~ status_label }}
+    {% if headline %}
+      <strong class="asset-status-headline">{{ headline }}</strong>
+      <span class="asset-status-term">{{ status_label }}</span>
+    {% else %}
+      {{ units ? status_label : 'Status: ' ~ status_label }}
+    {% endif %}
   </div>
+
+  {% if note %}
+    <div class="asset-status-note">{{ note }}</div>
+  {% endif %}
 
   {% if message %}
     <div class="asset-status-message">
@@ -57,6 +71,13 @@
 
 {% if history_url and not units %}
   </a>
+{% endif %}
+
+{% if report %}
+  <details class="asset-status-report">
+    <summary>{{ 'What was reported'|t }}</summary>
+    <p>{{ report }}</p>
+  </details>
 {% endif %}
 
 {% if units %}
